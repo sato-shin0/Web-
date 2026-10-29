@@ -565,8 +565,28 @@
                 body: JSON.stringify({ ...payload, password: adminPassword })
             });
             const data = await res.json();
-            if (!data.ok) throw new Error(data.error || 'unknown error');
+            if (!data.ok) {
+                const err = new Error(data.error || 'unknown error');
+                // Server-side password changed after login: send the admin back to the login screen
+                if (data.error === 'unauthorized' && payload.action !== 'login') {
+                    requireAdminRelogin();
+                    err.handled = true;
+                }
+                throw err;
+            }
             return data;
+        }
+
+        function requireAdminRelogin() {
+            adminPassword = '';
+            stopAdminAutoRefresh();
+            document.getElementById('adminContentSection').classList.add('hidden');
+            document.getElementById('adminLoginSection').classList.remove('hidden');
+            document.getElementById('adminPassInput').value = '';
+            const errorElem = document.getElementById('adminPassError');
+            errorElem.textContent = '管理者パスワードが一致しませんでした（パスワードが変更された可能性があります）。もう一度ログインしてください。';
+            errorElem.classList.remove('hidden');
+            alert('管理者パスワードが一致しないため、操作を完了できませんでした。\nもう一度ログインしてから操作してください。');
         }
 
         // Load Customized Images from LocalStorage (cache of the shared settings)
@@ -1101,6 +1121,7 @@
                 try {
                     await postApi({ action: 'save', images });
                 } catch (err) {
+                    if (err.handled) return;
                     alert(`学級旗画像の保存に失敗しました。通信状況を確認してもう一度お試しください。\n(${err.message})`);
                     return;
                 }
@@ -1127,6 +1148,7 @@
                     try {
                         await postApi({ action: 'reset' });
                     } catch (err) {
+                        if (err.handled) return;
                         alert(`初期画像への復元に失敗しました。\n(${err.message})`);
                         return;
                     }
@@ -1145,6 +1167,7 @@
             try {
                 votes = await fetchVotes();
             } catch (err) {
+                if (err.handled) return;
                 alert(`投票データを取得できませんでした。(${err.message})`);
                 return;
             }
@@ -1205,6 +1228,7 @@
                     try {
                         await postApi({ action: 'resetVotes' });
                     } catch (err) {
+                        if (err.handled) return;
                         alert(`投票データを消去できませんでした。(${err.message})`);
                         return;
                     }
