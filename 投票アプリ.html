@@ -3,1066 +3,827 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>中学校文化祭 学級旗コンテスト投票</title>
-    <!-- Tailwind CSS -->
+    <title>学級旗コンテスト 投票システム</title>
+    <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap');
-        body {
-            font-family: 'Zen Maru Gothic', sans-serif;
-            background-color: #f8fafc;
-        }
-        .flag-card-selected {
+        .card-selected {
             border-color: #3b82f6 !important;
             background-color: #eff6ff !important;
-            box-shadow: 0 10px 20px -3px rgba(59, 130, 246, 0.3);
-        }
-        @keyframes keyframeBounceShort {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-4px); }
-        }
-        .animate-bounce-short {
-            animation: keyframeBounceShort 0.8s ease-in-out infinite;
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3) !important;
         }
     </style>
 </head>
-<body class="min-h-screen text-slate-800 flex flex-col justify-between selection:bg-blue-200">
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
 
     <!-- Header -->
-    <header class="bg-gradient-to-r from-indigo-600 via-blue-600 to-sky-500 text-white shadow-lg sticky top-0 z-30">
+    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-40">
         <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center space-x-3 cursor-pointer" onclick="resetToHome()">
-                <div class="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
-                    <i class="fa-solid fa-flag text-2xl text-yellow-300"></i>
-                </div>
-                <div>
-                    <span class="text-xs font-semibold tracking-wider bg-yellow-400 text-indigo-950 px-2 py-0.5 rounded-full inline-block mb-0.5">文化祭学級旗コンテスト</span>
-                    <h1 class="text-lg md:text-xl font-bold tracking-tight">生徒・保護者 投票Webシステム</h1>
-                </div>
+            <div class="flex items-center space-x-2">
+                <i data-lucide="flag" class="w-6 h-6 text-yellow-300"></i>
+                <h1 class="font-bold text-lg md:text-xl tracking-wide">学級旗コンテスト投票</h1>
             </div>
-            <button onclick="openAdminModal()" class="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg border border-white/20 transition duration-200 flex items-center gap-1.5">
-                <i class="fa-solid fa-gear"></i>
-                <span class="hidden sm:inline">管理・集計</span>
+            <button id="nav-admin-btn" onclick="showAdminLogin()" class="text-xs bg-indigo-800 hover:bg-indigo-900 px-3 py-1.5 rounded text-indigo-100 flex items-center gap-1 transition">
+                <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                <span>管理画面</span>
             </button>
         </div>
     </header>
 
-    <!-- Main Container -->
-    <main class="max-w-3xl mx-auto w-full px-4 py-6 flex-grow">
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 md:p-6">
 
-        <!-- Progress Stepper -->
-        <div id="stepperContainer" class="mb-8 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-            <div class="flex items-center justify-between text-xs sm:text-sm font-medium">
-                <!-- Step 1 -->
-                <div id="step-node-1" class="flex flex-col items-center flex-1 text-blue-600 font-bold">
-                    <div id="step-circle-1" class="w-8 h-8 rounded-full border-2 border-blue-600 flex items-center justify-center mb-1 bg-blue-50 text-blue-600">
-                        1
+        <!-- ================= 画面1: 属性選択 (保護者 or 生徒) ================= -->
+        <section id="step-voter-type" class="bg-white rounded-xl shadow-sm p-6 md:p-8 mb-6 border border-slate-200">
+            <h2 class="text-xl font-bold text-center mb-6 text-slate-700 flex items-center justify-center gap-2">
+                <i data-lucide="user-check" class="text-indigo-600"></i> 投票者を選択してください
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button onclick="selectVoterType('guest')" class="p-6 border-2 border-slate-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50/50 transition flex flex-col items-center justify-center gap-3 group focus:outline-none">
+                    <div class="w-16 h-16 rounded-full bg-slate-100 group-hover:bg-indigo-100 text-slate-600 group-hover:text-indigo-600 flex items-center justify-center transition">
+                        <i data-lucide="users" class="w-8 h-8"></i>
                     </div>
-                    <span>立場選択</span>
-                </div>
-                <div class="w-8 h-0.5 bg-slate-200 mb-5"></div>
-                <!-- Step 2 -->
-                <div id="step-node-2" class="flex flex-col items-center flex-1 text-slate-400">
-                    <div id="step-circle-2" class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center mb-1 bg-white">
-                        2
-                    </div>
-                    <span id="step-2-label">情報入力</span>
-                </div>
-                <div class="w-8 h-0.5 bg-slate-200 mb-5"></div>
-                <!-- Step 3 -->
-                <div id="step-node-3" class="flex flex-col items-center flex-1 text-slate-400">
-                    <div id="step-circle-3" class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center mb-1 bg-white">
-                        3
-                    </div>
-                    <span>作品投票</span>
-                </div>
-                <div class="w-8 h-0.5 bg-slate-200 mb-5"></div>
-                <!-- Step 4 -->
-                <div id="step-node-4" class="flex flex-col items-center flex-1 text-slate-400">
-                    <div id="step-circle-4" class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center mb-1 bg-white">
-                        4
-                    </div>
-                    <span>完了</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Alert Banner -->
-        <div id="alertBanner" class="hidden mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm flex items-start gap-3 shadow-sm transition-all duration-300">
-            <i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg shrink-0 mt-0.5"></i>
-            <div id="alertBannerText" class="flex-grow">メッセージ</div>
-        </div>
-
-        <!-- STEP 1: 立場選択 (Role Selection) -->
-        <section id="step1" class="space-y-6">
-            <div class="text-center py-4">
-                <h2 class="text-xl md:text-2xl font-bold text-slate-800 mb-2">投票者の立場を選択してください</h2>
-                <p class="text-slate-500 text-sm">該当する選択肢ボタンをタップしてください。</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                <!-- Parent Option -->
-                <button onclick="selectRole('parent')" class="group p-6 bg-white border-2 border-slate-200 hover:border-indigo-500 rounded-2xl shadow-sm hover:shadow-md transition duration-200 flex flex-col items-center text-center space-y-3 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 bg-indigo-500 text-white text-[10px] px-3 py-1 rounded-bl-lg font-bold">入力なし</div>
-                    <div class="w-16 h-16 rounded-full bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center text-indigo-600 transition">
-                        <i class="fa-solid fa-users text-3xl"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-bold text-slate-800 group-hover:text-indigo-600 transition">保護者・一般</h3>
-                        <p class="text-xs text-slate-500 mt-1">保護者および来場者の皆様<br>（直接学級旗の投票へ移動します）</p>
-                    </div>
-                    <div class="pt-2 text-indigo-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-1 transition">
-                        作品投票へ進む <i class="fa-solid fa-arrow-right"></i>
-                    </div>
+                    <span class="text-lg font-bold text-slate-800">保護者・一般の皆様</span>
+                    <span class="text-xs text-slate-500">学年・組の入力なしで直接投票できます</span>
                 </button>
-
-                <!-- Student Option -->
-                <button onclick="selectRole('student')" class="group p-6 bg-white border-2 border-slate-200 hover:border-blue-500 rounded-2xl shadow-sm hover:shadow-md transition duration-200 flex flex-col items-center text-center space-y-3 relative overflow-hidden">
-                    <div class="w-16 h-16 rounded-full bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center text-blue-600 transition">
-                        <i class="fa-solid fa-graduation-cap text-3xl"></i>
+                
+                <button onclick="selectVoterType('student')" class="p-6 border-2 border-slate-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50/50 transition flex flex-col items-center justify-center gap-3 group focus:outline-none">
+                    <div class="w-16 h-16 rounded-full bg-slate-100 group-hover:bg-indigo-100 text-slate-600 group-hover:text-indigo-600 flex items-center justify-center transition">
+                        <i data-lucide="graduation-cap" class="w-8 h-8"></i>
                     </div>
-                    <div>
-                        <h3 class="text-lg font-bold text-slate-800 group-hover:text-blue-600 transition">生 徒</h3>
-                        <p class="text-xs text-slate-500 mt-1">本校の在校生<br>（学年・クラス・出席番号を入力）</p>
-                    </div>
-                    <div class="pt-2 text-blue-600 font-bold text-sm flex items-center gap-1 group-hover:translate-x-1 transition">
-                        学年・組の入力へ <i class="fa-solid fa-arrow-right"></i>
-                    </div>
+                    <span class="text-lg font-bold text-slate-800">生徒の皆さん</span>
+                    <span class="text-xs text-slate-500">学年・組・出席番号を入力して投票します</span>
                 </button>
             </div>
         </section>
 
-        <!-- STEP 2: 生徒認証入力 (Student Form) -->
-        <section id="step2" class="hidden space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <div class="text-center mb-6">
-                    <h2 class="text-xl font-bold text-slate-800">生徒情報の入力</h2>
-                    <p class="text-xs text-slate-500 mt-1">重複投票チェックのため、学年・組・出席番号を選択してください。（1人1回まで）</p>
-                </div>
-
-                <form id="studentForm" onsubmit="handleStudentFormSubmit(event)" class="space-y-5">
-                    <!-- Grade -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-2">学年 <span class="text-red-500">*</span></label>
-                        <div class="grid grid-cols-3 gap-3">
-                            <label class="cursor-pointer">
-                                <input type="radio" name="grade" value="1" required class="peer sr-only">
-                                <div class="p-3 text-center rounded-xl border border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 peer-checked:font-bold hover:bg-slate-50 transition">
-                                    1年生
-                                </div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input type="radio" name="grade" value="2" class="peer sr-only">
-                                <div class="p-3 text-center rounded-xl border border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 peer-checked:font-bold hover:bg-slate-50 transition">
-                                    2年生
-                                </div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input type="radio" name="grade" value="3" class="peer sr-only">
-                                <div class="p-3 text-center rounded-xl border border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 peer-checked:font-bold hover:bg-slate-50 transition">
-                                    3年生
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Class (1, 2, 3, 5, 6組) -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-2">所属クラス <span class="text-red-500">*</span></label>
-                        <div class="grid grid-cols-5 gap-2">
-                            <label class="cursor-pointer">
-                                <input type="radio" name="classNum" value="1" required class="peer sr-only">
-                                <div class="p-3 text-center rounded-xl border border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 peer-checked:font-bold hover:bg-slate-50 transition text-sm">
-                                    1組
-                                </div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input type="radio" name="classNum" value="2" class="peer sr-only">
-                                <div class="p-3 text-center rounded-xl border border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 peer-checked:font-bold hover:bg-slate-50 transition text-sm">
-                                    2組
-                                </div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input type="radio" name="classNum" value="3" class="peer sr-only">
-                                <div class="p-3 text-center rounded-xl border border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 peer-checked:font-bold hover:bg-slate-50 transition text-sm">
-                                    3組
-                                </div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input type="radio" name="classNum" value="5" class="peer sr-only">
-                                <div class="p-3 text-center rounded-xl border border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 peer-checked:font-bold hover:bg-slate-50 transition text-sm">
-                                    5組
-                                </div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input type="radio" name="classNum" value="6" class="peer sr-only">
-                                <div class="p-3 text-center rounded-xl border border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 peer-checked:font-bold hover:bg-slate-50 transition text-sm">
-                                    6組
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Attendance Number -->
-                    <div>
-                        <label for="attendNum" class="block text-xs font-bold text-slate-700 uppercase mb-2">出席番号 <span class="text-red-500">*</span></label>
-                        <select id="attendNum" name="attendNum" required class="w-full p-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 text-slate-800 text-base">
-                            <option value="">出席番号を選択してください</option>
-                        </select>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="flex gap-3 pt-4">
-                        <button type="button" onclick="goToStep(1)" class="w-1/3 py-3 px-4 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-50 transition text-sm">
-                            戻る
-                        </button>
-                        <button type="submit" class="w-2/3 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-200 transition text-sm flex items-center justify-center gap-2">
-                            <span>学級旗選択へ進む</span>
-                            <i class="fa-solid fa-chevron-right text-xs"></i>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </section>
-
-        <!-- STEP 3: 作品選択・投票 (Voting Screen) -->
-        <section id="step3" class="hidden space-y-6">
-            <!-- User Status Banner -->
-            <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 flex justify-between items-center text-xs sm:text-sm">
-                <div class="flex items-center gap-2 text-blue-900 font-medium">
-                    <i class="fa-solid fa-user-check text-blue-600"></i>
-                    <span>投票者: <strong id="currentUserDisplay" class="font-bold underline decoration-blue-400">---</strong></span>
-                </div>
-                <button onclick="goToStep(1)" class="text-xs text-blue-600 hover:underline">立場を変更</button>
+        <!-- ================= 画面2: 生徒情報入力 (生徒選択時のみ表示) ================= -->
+        <section id="step-student-info" class="hidden bg-white rounded-xl shadow-sm p-6 md:p-8 mb-6 border border-slate-200">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b">
+                <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2">
+                    <i data-lucide="id-card" class="text-indigo-600"></i> 生徒情報の入力
+                </h2>
+                <button onclick="resetToVoterType()" class="text-xs text-indigo-600 hover:underline flex items-center gap-1">
+                    <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> 戻る
+                </button>
             </div>
 
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div class="space-y-6">
+                <!-- 学年選択 -->
                 <div>
-                    <h2 class="text-xl font-bold text-slate-800">学級旗を選択してください</h2>
-                    <p class="text-xs text-slate-500">作品をタップすると写真を拡大確認できます。</p>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">学年</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <button type="button" onclick="setStudentGrade(1)" class="btn-grade border-2 border-slate-200 py-3 rounded-lg text-center font-bold text-slate-700 hover:border-indigo-400">1年生</button>
+                        <button type="button" onclick="setStudentGrade(2)" class="btn-grade border-2 border-slate-200 py-3 rounded-lg text-center font-bold text-slate-700 hover:border-indigo-400">2年生</button>
+                        <button type="button" onclick="setStudentGrade(3)" class="btn-grade border-2 border-slate-200 py-3 rounded-lg text-center font-bold text-slate-700 hover:border-indigo-400">3年生</button>
+                    </div>
                 </div>
-                <!-- Grade Filter Tabs -->
-                <div class="flex bg-slate-200/80 p-1 rounded-xl text-xs font-bold w-full sm:w-auto">
-                    <button onclick="filterFlags('all')" id="filter-all" class="filter-tab flex-1 sm:flex-none px-3 py-1.5 rounded-lg bg-white shadow-sm text-blue-600">全作品 (8)</button>
-                    <button onclick="filterFlags('1')" id="filter-1" class="filter-tab flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">1年 (3)</button>
-                    <button onclick="filterFlags('2')" id="filter-2" class="filter-tab flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">2年 (2)</button>
-                    <button onclick="filterFlags('3')" id="filter-3" class="filter-tab flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">3年 (3)</button>
-                </div>
-            </div>
 
-            <!-- Flag Cards Grid -->
-            <div id="flagGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Dynamically Populated by JS -->
-            </div>
-
-            <!-- Sticky Vote Confirmation Bar -->
-            <div class="sticky bottom-4 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-slate-200 flex items-center justify-between gap-4 mt-8 z-20">
-                <div class="text-sm">
-                    <span class="text-xs text-slate-500 block">選択中の学級旗</span>
-                    <span id="selectedFlagLabel" class="font-bold text-blue-600 text-base">未選択</span>
+                <!-- クラス選択 (1〜6組) -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">組</label>
+                    <div class="grid grid-cols-5 gap-2">
+                        <button type="button" onclick="setStudentClass(1)" class="btn-class border-2 border-slate-200 py-2.5 rounded-lg text-center font-bold text-slate-700 hover:border-indigo-400">1組</button>
+                        <button type="button" onclick="setStudentClass(2)" class="btn-class border-2 border-slate-200 py-2.5 rounded-lg text-center font-bold text-slate-700 hover:border-indigo-400">2組</button>
+                        <button type="button" onclick="setStudentClass(3)" class="btn-class border-2 border-slate-200 py-2.5 rounded-lg text-center font-bold text-slate-700 hover:border-indigo-400">3組</button>
+                        <button type="button" onclick="setStudentClass(5)" class="btn-class border-2 border-slate-200 py-2.5 rounded-lg text-center font-bold text-slate-700 hover:border-indigo-400">5組</button>
+                        <button type="button" onclick="setStudentClass(6)" class="btn-class border-2 border-slate-200 py-2.5 rounded-lg text-center font-bold text-slate-700 hover:border-indigo-400">6組</button>
+                    </div>
                 </div>
-                <button id="submitVoteBtn" disabled onclick="confirmVote()" class="py-3 px-6 rounded-xl bg-slate-300 text-slate-500 font-bold transition flex items-center gap-2 cursor-not-allowed">
-                    <i class="fa-solid fa-paper-plane"></i>
-                    <span>投票を確定する</span>
+
+                <!-- 出席番号選択 -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">出席番号</label>
+                    <select id="student-number" onchange="setStudentNumber(this.value)" class="w-full border-2 border-slate-200 rounded-lg p-3 bg-white font-bold text-slate-700 focus:border-indigo-500 focus:outline-none">
+                        <option value="">選択してください</option>
+                    </select>
+                </div>
+
+                <!-- 次へボタン -->
+                <button id="btn-to-vote" disabled onclick="proceedToVote()" class="w-full bg-slate-300 text-white font-bold py-3.5 rounded-lg transition duration-200 flex items-center justify-center gap-2 cursor-not-allowed">
+                    作品一覧へ進む <i data-lucide="arrow-right" class="w-5 h-5"></i>
                 </button>
             </div>
         </section>
 
-        <!-- STEP 4: 投票完了 (Completion Screen) -->
-        <section id="step4" class="hidden space-y-6 text-center py-8">
-            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 max-w-md mx-auto relative overflow-hidden">
-                <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-500 text-4xl mx-auto mb-4">
-                    <i class="fa-solid fa-check"></i>
+        <!-- ================= 画面3: 作品選択 (学級旗カード一覧) ================= -->
+        <section id="step-vote-cards" class="hidden">
+            <div class="bg-white rounded-xl shadow-sm p-4 mb-6 border border-slate-200 flex flex-wrap justify-between items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <span id="voter-badge" class="bg-indigo-100 text-indigo-800 font-bold px-3 py-1 rounded-full text-xs">生徒</span>
+                    <span id="voter-info-display" class="font-bold text-slate-700 text-sm"></span>
                 </div>
-                <h2 class="text-2xl font-black text-slate-800 mb-2">投票を受け付けました！</h2>
-                <p class="text-xs text-slate-500 mb-6">ご協力ありがとうございました。<br>投票結果は文化祭の閉会式にて発表されます。</p>
-
-                <!-- Vote Summary Card -->
-                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left mb-6 space-y-2">
-                    <div class="text-xs text-slate-400 font-bold border-b border-slate-200 pb-1">投票受付内容</div>
-                    <div class="flex justify-between text-xs text-slate-600">
-                        <span>区分:</span>
-                        <span id="summaryRole" class="font-bold text-slate-800"></span>
-                    </div>
-                    <div class="flex justify-between text-xs text-slate-600">
-                        <span>投票対象:</span>
-                        <span id="summaryClass" class="font-bold text-blue-600 text-sm"></span>
-                    </div>
-                    <div class="flex justify-between text-xs text-slate-600">
-                        <span>投票時刻:</span>
-                        <span id="summaryTime" class="text-slate-500"></span>
-                    </div>
-                </div>
-
-                <button onclick="resetToHome()" class="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold transition text-sm flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-house"></i>
-                    <span>トップ画面へ戻る</span>
+                <button onclick="resetToVoterType()" class="text-xs text-slate-500 hover:text-slate-800 underline flex items-center gap-1">
+                    最初からやり直す
                 </button>
+            </div>
+
+            <!-- 学年フィルタータブ -->
+            <div class="flex border-b border-slate-200 mb-6 bg-white rounded-t-xl overflow-hidden shadow-sm">
+                <button onclick="filterGrade('all')" class="tab-btn flex-1 py-3 text-center font-bold text-sm border-b-2 border-indigo-600 text-indigo-600 bg-indigo-50/30">すべて (8作品)</button>
+                <button onclick="filterGrade('1')" class="tab-btn flex-1 py-3 text-center font-bold text-sm text-slate-500 border-b-2 border-transparent hover:text-slate-800">1年生</button>
+                <button onclick="filterGrade('2')" class="tab-btn flex-1 py-3 text-center font-bold text-sm text-slate-500 border-b-2 border-transparent hover:text-slate-800">2年生</button>
+                <button onclick="filterGrade('3')" class="tab-btn flex-1 py-3 text-center font-bold text-sm text-slate-500 border-b-2 border-transparent hover:text-slate-800">3年生</button>
+            </div>
+
+            <!-- カード一覧コンテナ -->
+            <div id="flag-cards-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <!-- JSで動的生成 -->
+            </div>
+
+            <!-- 投票確定浮き出しボタン -->
+            <div class="sticky bottom-4 z-30">
+                <button id="btn-submit-vote" disabled onclick="confirmVoteModal()" class="w-full bg-slate-300 text-slate-500 font-bold py-4 rounded-xl shadow-lg text-lg flex items-center justify-center gap-2 cursor-not-allowed transition-all">
+                    <i data-lucide="check-circle" class="w-6 h-6"></i>
+                    <span>学級旗を選択してください</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ================= 管理画面 ================= -->
+        <section id="section-admin" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200 flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="bar-chart-3" class="text-indigo-600"></i> 管理者ダッシュボード
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">リアルタイム集計結果とCSVダウンロード</p>
+                </div>
+                <button onclick="closeAdmin()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1">
+                    <i data-lucide="x" class="w-4 h-4"></i> 閉じる
+                </button>
+            </div>
+
+            <!-- 管理画面タブ -->
+            <div class="flex border-b border-slate-200 bg-white rounded-t-xl overflow-hidden">
+                <button onclick="switchAdminTab('results')" id="admin-tab-results" class="flex-1 py-3 font-bold text-sm text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50">集計結果</button>
+                <button onclick="switchAdminTab('settings')" id="admin-tab-settings" class="flex-1 py-3 font-bold text-sm text-slate-500 border-b-2 border-transparent">学級旗設定 (タイトル・画像)</button>
+            </div>
+
+            <!-- タブ1: 集計結果 -->
+            <div id="admin-content-results" class="space-y-6">
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 text-center">
+                        <span class="text-xs text-slate-500 font-bold block mb-1">総投票数</span>
+                        <span id="stat-total" class="text-2xl md:text-3xl font-extrabold text-slate-800">0</span>
+                    </div>
+                    <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 text-center">
+                        <span class="text-xs text-indigo-600 font-bold block mb-1">生徒票</span>
+                        <span id="stat-student" class="text-2xl md:text-3xl font-extrabold text-indigo-700">0</span>
+                    </div>
+                    <div class="bg-sky-50 p-4 rounded-xl border border-sky-100 text-center">
+                        <span class="text-xs text-sky-600 font-bold block mb-1">保護者票</span>
+                        <span id="stat-guest" class="text-2xl md:text-3xl font-extrabold text-sky-700">0</span>
+                    </div>
+                </div>
+
+                <!-- 各クラス得票一覧 -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="font-bold text-slate-700 mb-4 pb-2 border-b flex justify-between items-center">
+                        <span>クラス別集計結果</span>
+                        <span class="text-xs font-normal text-slate-500">青: 生徒 / 空色: 保護者</span>
+                    </h3>
+                    <div id="admin-results-list" class="space-y-4">
+                        <!-- JSで動的生成 -->
+                    </div>
+                </div>
+
+                <!-- エクスポート＆データ操作 -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
+                    <h3 class="font-bold text-slate-700 pb-2 border-b">データ操作・出力</h3>
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="downloadResultsCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-lg text-sm flex items-center gap-2 shadow-sm transition">
+                            <i data-lucide="download" class="w-4 h-4"></i> 集計CSVを出力 (Excel文字化け防止加工済)
+                        </button>
+                        <button onclick="downloadHistoryCSV()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-lg text-sm flex items-center gap-2 shadow-sm transition">
+                            <i data-lucide="file-text" class="w-4 h-4"></i> 投票明細CSVを出力
+                        </button>
+                    </div>
+                    <div class="pt-4 border-t">
+                        <button onclick="resetAllVotes()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1 transition">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> 全投票データを消去 (リセット)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- タブ2: 学級旗設定 (タイトル・画像変更) -->
+            <div id="admin-content-settings" class="hidden space-y-4">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="font-bold text-slate-700 mb-2">各学級旗の情報編集</h3>
+                    <p class="text-xs text-slate-500 mb-6">クラスタイトルや画像ファイルを変更できます。変更内容は即座に投票画面へ反映されます。</p>
+
+                    <div id="admin-settings-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- JSで動的生成 -->
+                    </div>
+                </div>
             </div>
         </section>
 
     </main>
 
     <!-- Footer -->
-    <footer class="bg-slate-100 border-t border-slate-200 text-center py-4 text-xs text-slate-500">
-        <p>© 令和6年度 中学校文化祭 実行委員会</p>
+    <footer class="bg-slate-200 border-t border-slate-300 py-4 text-center text-xs text-slate-500">
+        文化祭 学級旗コンテスト 投票システム
     </footer>
 
-    <!-- Image Preview / Confirm Modal -->
-    <div id="imagePreviewModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            <div class="relative bg-black flex items-center justify-center overflow-hidden h-64 sm:h-80 shrink-0">
-                <img id="modalPreviewImg" src="" alt="学級旗拡大表示" class="max-h-full max-w-full object-contain">
-                <button onclick="closePreviewModal()" class="absolute top-3 right-3 bg-black/50 hover:bg-black/70 text-white w-8 h-8 rounded-full flex items-center justify-center transition">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
+    <!-- ================= モーダル類 ================= -->
+
+    <!-- モーダル1: 投票確認ダイアログ -->
+    <div id="modal-confirm" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-fade-in space-y-4">
+            <h3 class="text-lg font-bold text-slate-800 text-center border-b pb-3">投票内容の確認</h3>
+            
+            <div class="text-center space-y-3">
+                <div id="confirm-voter-tag" class="inline-block bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full"></div>
+                <div id="confirm-flag-title" class="text-2xl font-black text-indigo-600"></div>
+                
+                <div class="rounded-lg overflow-hidden border border-slate-200 max-h-48 flex items-center justify-center bg-slate-50">
+                    <img id="confirm-flag-img" src="" alt="" class="object-contain max-h-48 w-full">
+                </div>
             </div>
-            <div class="p-5 space-y-3 overflow-y-auto">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <span id="modalPreviewClass" class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-0.5 rounded-full inline-block mb-1">1年1組</span>
-                        <h3 id="modalPreviewTitle" class="text-lg font-bold text-slate-800"></h3>
-                    </div>
-                </div>
-                <p id="modalPreviewSlogan" class="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 italic leading-relaxed"></p>
-                <div class="flex gap-3 pt-2">
-                    <button onclick="closePreviewModal()" class="w-1/3 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-50 text-sm">
-                        閉じる
-                    </button>
-                    <button id="modalSelectBtn" onclick="selectFlagFromModal()" class="w-2/3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-200 text-sm flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-check"></i>
-                        <span>この作品を選択する</span>
-                    </button>
-                </div>
+
+            <p class="text-center text-xs text-rose-500 font-bold">※投票は一度送信するとやり直せません。</p>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button onclick="closeConfirmModal()" class="py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition">やり直す</button>
+                <button onclick="submitVote()" class="py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition">確定して投票</button>
             </div>
         </div>
     </div>
 
-    <!-- Final Confirm Modal -->
-    <div id="confirmModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
-            <div class="text-center">
-                <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-2 text-xl">
-                    <i class="fa-solid fa-circle-question"></i>
-                </div>
-                <h3 class="text-lg font-bold text-slate-800">投票内容の確定</h3>
-                <p class="text-xs text-slate-500 mt-1">送信後の投票内容変更や再投票はできません。<br>送信してもよろしいですか？</p>
+    <!-- モーダル2: 投票完了画面 -->
+    <div id="modal-complete" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl text-center space-y-4">
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                <i data-lucide="check" class="w-10 h-10"></i>
             </div>
-
-            <div class="bg-slate-50 p-3 rounded-xl text-center border border-slate-200">
-                <div class="text-xs text-slate-400">選択した作品</div>
-                <div id="modalTargetFlag" class="text-lg font-black text-blue-600 mt-0.5"></div>
-            </div>
-
-            <div class="flex gap-2 pt-2">
-                <button onclick="closeModal()" class="w-1/2 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-50 text-sm">
-                    やり直す
-                </button>
-                <button onclick="submitFinalVote()" class="w-1/2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-200 text-sm">
-                    確定する
+            <h3 class="text-2xl font-black text-slate-800">投票が完了しました</h3>
+            <p class="text-sm text-slate-600">ご協力ありがとうございました。<br>結果発表をお楽しみに！</p>
+            <div class="pt-4">
+                <button onclick="finishVoteAndReset()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow transition">
+                    トップ画面へ戻る
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Admin / Results & Settings Modal -->
-    <div id="adminModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl space-y-6">
-            <div class="flex justify-between items-center border-b pb-3">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-chart-column text-indigo-600 text-xl"></i>
-                    <h3 class="text-lg font-bold text-slate-800">管理画面（リアルタイム集計 / 学級旗設定）</h3>
-                </div>
-                <button onclick="closeAdminModal()" class="text-slate-400 hover:text-slate-600 p-1">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
+    <!-- モーダル3: 管理者ログイン -->
+    <div id="modal-admin-login" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-xs w-full p-6 shadow-2xl space-y-4">
+            <h3 class="text-lg font-bold text-slate-800 text-center">管理者ログイン</h3>
+            <div>
+                <input type="password" id="admin-pass-input" placeholder="パスワードを入力" class="w-full border border-slate-300 rounded-lg p-3 text-center text-lg focus:outline-none focus:border-indigo-500">
             </div>
-
-            <!-- Login Section -->
-            <div id="adminLoginSection" class="space-y-4 py-4">
-                <p class="text-xs text-slate-500">集計結果の閲覧や設定管理を行うには管理者パスワードを入力してください。</p>
-                <div class="flex gap-2">
-                    <input type="password" id="adminPassInput" placeholder="管理者パスワード" class="border border-slate-300 p-2.5 rounded-xl flex-grow text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <button onclick="checkAdminPassword()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm">認証</button>
-                </div>
-                <p id="adminPassError" class="text-xs text-red-500 hidden">パスワードが正しくありません。</p>
-            </div>
-
-            <!-- Admin Content Section -->
-            <div id="adminContentSection" class="hidden space-y-8">
-
-                <!-- Admin Tab Switching -->
-                <div class="flex border-b border-slate-200">
-                    <button id="tabBtn-results" onclick="switchAdminTab('results')" class="px-4 py-2 text-sm font-bold border-b-2 border-indigo-600 text-indigo-600">
-                        <i class="fa-solid fa-square-poll-vertical mr-1"></i> 得票集計結果
-                    </button>
-                    <button id="tabBtn-settings" onclick="switchAdminTab('settings')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800">
-                        <i class="fa-solid fa-pen-to-square mr-1"></i> 学級旗設定 (画像・タイトル)
-                    </button>
-                </div>
-
-                <!-- TAB 1: 投票集計画面 -->
-                <div id="adminTabContent-results" class="space-y-6">
-                    <!-- Stat Summary Cards -->
-                    <div class="grid grid-cols-3 gap-3">
-                        <div class="bg-blue-50 border border-blue-100 p-3 rounded-xl text-center">
-                            <span class="text-[10px] text-blue-600 font-bold block uppercase">総投票数</span>
-                            <span id="statTotalVotes" class="text-2xl font-black text-blue-700">0</span>
-                        </div>
-                        <div class="bg-indigo-50 border border-indigo-100 p-3 rounded-xl text-center">
-                            <span class="text-[10px] text-indigo-600 font-bold block uppercase">生徒票</span>
-                            <span id="statStudentVotes" class="text-2xl font-black text-indigo-700">0</span>
-                        </div>
-                        <div class="bg-sky-50 border border-sky-100 p-3 rounded-xl text-center">
-                            <span class="text-[10px] text-sky-600 font-bold block uppercase">保護者票</span>
-                            <span id="statParentVotes" class="text-2xl font-black text-sky-700">0</span>
-                        </div>
-                    </div>
-
-                    <!-- Ranking and Vote Progress -->
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center">
-                            <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">得票数ランキング・詳細内訳</h4>
-                            <div class="flex items-center gap-3 text-[11px] font-bold">
-                                <span class="flex items-center gap-1 text-indigo-600"><span class="w-2.5 h-2.5 bg-indigo-600 rounded-full inline-block"></span> 生徒票</span>
-                                <span class="flex items-center gap-1 text-sky-400"><span class="w-2.5 h-2.5 bg-sky-400 rounded-full inline-block"></span> 保護者票</span>
-                            </div>
-                        </div>
-                        <div id="adminResultsList" class="space-y-3">
-                            <!-- Populated by JS -->
-                        </div>
-                    </div>
-
-                    <!-- CSV Actions -->
-                    <div class="pt-4 border-t border-slate-200 flex flex-wrap justify-between items-center gap-2">
-                        <div class="flex gap-2">
-                            <button onclick="exportCSV('summary')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm">
-                                <i class="fa-solid fa-file-csv text-sm"></i>
-                                集計結果CSV
-                            </button>
-                            <button onclick="exportCSV('detail')" class="bg-slate-700 hover:bg-slate-800 text-white px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm">
-                                <i class="fa-solid fa-list-check text-sm"></i>
-                                投票履歴CSV
-                            </button>
-                        </div>
-                        <button onclick="resetAllData()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">
-                            <i class="fa-solid fa-trash-can"></i>
-                            全投票データを消去 (リセット)
-                        </button>
-                    </div>
-                </div>
-
-                <!-- TAB 2: 画像・タイトル管理画面 -->
-                <div id="adminTabContent-settings" class="hidden space-y-4">
-                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
-                        <p class="font-bold text-slate-800"><i class="fa-solid fa-circle-info text-blue-500 mr-1"></i> 学級旗設定の手順</p>
-                        <p>各クラスの画像・タイトル（スローガン）を直接変更できます。入力後、「変更を適用・保存」ボタンを押すと投票画面に反映されます。</p>
-                    </div>
-
-                    <div id="adminSettingsList" class="space-y-4 pt-2">
-                        <!-- Dynamic content populated by JS -->
-                    </div>
-
-                    <div class="pt-4 border-t border-slate-200 flex justify-between items-center">
-                        <button onclick="resetAllSettingsToDefault()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3.5 py-2 rounded-xl font-bold transition">
-                            <i class="fa-solid fa-rotate-left mr-1"></i> 初期状態に戻す
-                        </button>
-                        <button onclick="saveAllSettings()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-md transition">
-                            <i class="fa-solid fa-floppy-disk mr-1"></i> 変更を適用・保存
-                        </button>
-                    </div>
-                </div>
-
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="closeAdminLogin()" class="py-2.5 bg-slate-100 text-slate-700 font-bold rounded-lg text-sm">キャンセル</button>
+                <button onclick="verifyAdminPass()" class="py-2.5 bg-indigo-600 text-white font-bold rounded-lg text-sm">ログイン</button>
             </div>
         </div>
     </div>
 
+    <!-- JavaScript ロジック -->
     <script>
-        // Default Flag Configuration (8 target classes)
-        const DEFAULT_FLAG_DATA = [
-            { id: "1-1", grade: "1", classNum: "1", className: "1年1組", title: "1年1組「疾風迅雷」", slogan: "風のように速く、雷のように強く！全員で輝く！", defaultImageUrl: "https://placehold.co/600x400/f59e0b/ffffff?text=1%E5%B9%B41%E7%B5%84+%E5%AD%A6%E7%B4%9A%E6%97%97" },
-            { id: "1-2", grade: "1", classNum: "2", className: "1年2組", title: "1年2組「一過百心」", slogan: "100の心をひとつに。笑顔あふれる最強クラス！", defaultImageUrl: "https://placehold.co/600x400/3b82f6/ffffff?text=1%E5%B9%B42%E7%B5%84+%E5%AD%A6%E7%B4%9A%E6%97%97" },
-            { id: "1-3", grade: "1", classNum: "3", className: "1年3組", title: "1年3組「百花繚乱」", slogan: "一人ひとりの個性の花を咲かせよう！", defaultImageUrl: "https://placehold.co/600x400/ec4899/ffffff?text=1%E5%B9%B43%E7%B5%84+%E5%AD%A6%E7%B4%9A%E6%97%97" },
-            { id: "2-1", grade: "2", classNum: "1", className: "2年1組", title: "2年1組「龍躍鳳鳴」", slogan: "龍のごとく駆け抜け、鳳凰のごとく舞う！", defaultImageUrl: "https://placehold.co/600x400/6366f1/ffffff?text=2%E5%B9%B41%E7%B5%84+%E5%AD%A6%E7%B4%9A%E6%97%97" },
-            { id: "2-2", grade: "2", classNum: "2", className: "2年2組", title: "2年2組「不撓不屈」", slogan: "どんな困難にも負けない固い絆！", defaultImageUrl: "https://placehold.co/600x400/ef4444/ffffff?text=2%E5%B9%B42%E7%B5%84+%E5%AD%A6%E7%B4%9A%E6%97%97" },
-            { id: "3-1", grade: "3", classNum: "1", className: "3年1組", title: "3年1組「天下無双」", slogan: "最高学年のプライドと絆で目指す頂点！", defaultImageUrl: "https://placehold.co/600x400/dc2626/ffffff?text=3%E5%B9%B41%E7%B5%84+%E5%AD%A6%E7%B4%9A%E6%97%97" },
-            { id: "3-2", grade: "3", classNum: "2", className: "3年2組", title: "3年2組「威風堂々」", slogan: "自信を持って力強く前へ！感動をみんなで！", defaultImageUrl: "https://placehold.co/600x400/2563eb/ffffff?text=3%E5%B9%B42%E7%B5%84+%E5%AD%A6%E7%B4%9A%E6%97%97" },
-            { id: "3-3", grade: "3", classNum: "3", className: "3年3組", title: "3年3組「勇往邁進」", slogan: "二度とないこの瞬間を最高の仲間と駆け抜ける！", defaultImageUrl: "https://placehold.co/600x400/9333ea/ffffff?text=3%E5%B9%B43%E7%B5%84+%E5%AD%A6%E7%B4%9A%E6%97%97" }
+        // Default Flag Data (全8クラス)
+        const DEFAULT_FLAGS = [
+            { id: '1-1', grade: 1, name: '1年1組', imageUrl: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=600&q=80' },
+            { id: '1-2', grade: 1, name: '1年2組', imageUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=600&q=80' },
+            { id: '1-3', grade: 1, name: '1年3組', imageUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80' },
+            { id: '2-1', grade: 2, name: '2年1組', imageUrl: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=600&q=80' },
+            { id: '2-2', grade: 2, name: '2年2組', imageUrl: 'https://images.unsplash.com/photo-1508898578281-774ac4893c0c?auto=format&fit=crop&w=600&q=80' },
+            { id: '3-1', grade: 3, name: '3年1組', imageUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80' },
+            { id: '3-2', grade: 3, name: '3年2組', imageUrl: 'https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=600&q=80' },
+            { id: '3-3', grade: 3, name: '3年3組', imageUrl: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=600&q=80' },
         ];
 
-        let FLAG_DATA = [];
-
-        // Global State Variables
-        let currentStep = 1;
-        let selectedRole = null;
-        let studentInfo = null;
-        let selectedFlagId = null;
-        let previewingFlagId = null;
-        let currentFilterGrade = 'all';
-
-        // Local Storage Keys
-        const STORAGE_KEY_VOTES = 'flag_votes_record_v5';
-        const STORAGE_KEY_STUDENTS = 'flag_voted_students_v5';
-        const STORAGE_KEY_PARENT_DEVICE = 'flag_parent_voted_device_v5';
-        const STORAGE_KEY_CUSTOM_SETTINGS = 'flag_custom_settings_v5';
-
-        window.onload = function() {
-            loadCustomSettings();
-            populateAttendanceNumbers();
-            renderFlagGrid();
+        // State Management
+        let flags = [];
+        let state = {
+            voterType: null, // 'student' | 'guest'
+            studentGrade: null,
+            studentClass: null,
+            studentNumber: null,
+            selectedFlagId: null,
+            filterGrade: 'all'
         };
 
-        // Load Customized Images and Titles from LocalStorage
-        function loadCustomSettings() {
-            const customSettings = JSON.parse(localStorage.getItem(STORAGE_KEY_CUSTOM_SETTINGS) || '{}');
-            FLAG_DATA = DEFAULT_FLAG_DATA.map(item => {
-                const custom = customSettings[item.id] || {};
-                return {
-                    ...item,
-                    title: custom.title || item.title,
-                    slogan: custom.slogan || item.slogan,
-                    imageUrl: custom.imageUrl || item.defaultImageUrl
-                };
-            });
-        }
+        // Storage Keys
+        const STORAGE_FLAGS = 'flag_app_data_v2';
+        const STORAGE_VOTES = 'flag_votes_v2';
+        const STORAGE_VOTED_STUDENTS = 'flag_voted_students_v2';
 
-        function populateAttendanceNumbers() {
-            const select = document.getElementById('attendNum');
-            select.innerHTML = '<option value="">出席番号を選択してください</option>';
+        // Admin Auth
+        const ADMIN_PASS = 'admin123';
+
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            init出席番号Select();
+            loadFlagsData();
+            renderCards();
+            lucide.createIcons();
+        });
+
+        // Populate Student Number Options (1〜40)
+        function init出席番号Select() {
+            const sel = document.getElementById('student-number');
+            sel.innerHTML = '<option value="">選択してください</option>';
             for (let i = 1; i <= 40; i++) {
                 const opt = document.createElement('option');
                 opt.value = i;
                 opt.textContent = `${i}番`;
-                select.appendChild(opt);
+                sel.appendChild(opt);
             }
         }
 
-        function goToStep(step) {
-            hideAlert();
-            for (let i = 1; i <= 4; i++) {
-                document.getElementById(`step${i}`).classList.add('hidden');
-            }
-            document.getElementById(`step${step}`).classList.remove('hidden');
-            currentStep = step;
-            updateStepperUI(step);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function updateStepperUI(activeStep) {
-            for (let i = 1; i <= 4; i++) {
-                const node = document.getElementById(`step-node-${i}`);
-                const circle = document.getElementById(`step-circle-${i}`);
-
-                if (i < activeStep) {
-                    node.className = "flex flex-col items-center flex-1 text-emerald-600 font-bold";
-                    circle.className = "w-8 h-8 rounded-full border-2 border-emerald-500 bg-emerald-50 text-emerald-600 flex items-center justify-center mb-1";
-                    circle.innerHTML = '<i class="fa-solid fa-check text-xs"></i>';
-                } else if (i === activeStep) {
-                    node.className = "flex flex-col items-center flex-1 text-blue-600 font-bold";
-                    circle.className = "w-8 h-8 rounded-full border-2 border-blue-600 bg-blue-50 text-blue-600 flex items-center justify-center mb-1 font-bold";
-                    circle.innerHTML = i;
-                } else {
-                    node.className = "flex flex-col items-center flex-1 text-slate-400";
-                    circle.className = "w-8 h-8 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center mb-1";
-                    circle.innerHTML = i;
+        // Load Flag Config from LocalStorage
+        function loadFlagsData() {
+            const saved = localStorage.getItem(STORAGE_FLAGS);
+            if (saved) {
+                try {
+                    flags = JSON.parse(saved);
+                } catch(e) {
+                    flags = [...DEFAULT_FLAGS];
                 }
-            }
-
-            const step2Label = document.getElementById('step-2-label');
-            if (selectedRole === 'parent') {
-                step2Label.textContent = '情報入力（スキップ）';
             } else {
-                step2Label.textContent = '情報入力';
+                flags = [...DEFAULT_FLAGS];
             }
         }
 
-        function selectRole(role) {
-            selectedRole = role;
+        function saveFlagsData() {
+            localStorage.setItem(STORAGE_FLAGS, JSON.stringify(flags));
+        }
 
-            if (role === 'parent') {
-                studentInfo = null;
-                document.getElementById('currentUserDisplay').textContent = '保護者・一般';
-                goToStep(3);
+        // --- Step Navigation & State Control ---
+
+        function selectVoterType(type) {
+            state.voterType = type;
+            document.getElementById('step-voter-type').classList.add('hidden');
+
+            if (type === 'guest') {
+                document.getElementById('voter-badge').className = "bg-sky-100 text-sky-800 font-bold px-3 py-1 rounded-full text-xs";
+                document.getElementById('voter-badge').textContent = "保護者・一般";
+                document.getElementById('voter-info-display').textContent = "保護者投票";
+                document.getElementById('step-vote-cards').classList.remove('hidden');
             } else {
-                goToStep(2);
+                document.getElementById('step-student-info').classList.remove('hidden');
+            }
+            lucide.createIcons();
+        }
+
+        function resetToVoterType() {
+            state = { voterType: null, studentGrade: null, studentClass: null, studentNumber: null, selectedFlagId: null, filterGrade: 'all' };
+            
+            // Reset UI States
+            document.querySelectorAll('.btn-grade, .btn-class').forEach(b => b.classList.remove('border-indigo-600', 'bg-indigo-50', 'text-indigo-600'));
+            document.getElementById('student-number').value = '';
+            document.getElementById('btn-to-vote').disabled = true;
+            document.getElementById('btn-to-vote').className = "w-full bg-slate-300 text-white font-bold py-3.5 rounded-lg transition duration-200 flex items-center justify-center gap-2 cursor-not-allowed";
+
+            document.getElementById('step-voter-type').classList.remove('hidden');
+            document.getElementById('step-student-info').classList.add('hidden');
+            document.getElementById('step-vote-cards').classList.add('hidden');
+            document.getElementById('section-admin').classList.add('hidden');
+            renderCards();
+        }
+
+        function setStudentGrade(g) {
+            state.studentGrade = g;
+            document.querySelectorAll('.btn-grade').forEach((btn, idx) => {
+                if ([1,2,3][idx] === g) {
+                    btn.classList.add('border-indigo-600', 'bg-indigo-50', 'text-indigo-600');
+                } else {
+                    btn.classList.remove('border-indigo-600', 'bg-indigo-50', 'text-indigo-600');
+                }
+            });
+            validateStudentStep();
+        }
+
+        function setStudentClass(c) {
+            state.studentClass = c;
+            const classArr = [1, 2, 3, 5, 6];
+            document.querySelectorAll('.btn-class').forEach((btn, idx) => {
+                if (classArr[idx] === c) {
+                    btn.classList.add('border-indigo-600', 'bg-indigo-50', 'text-indigo-600');
+                } else {
+                    btn.classList.remove('border-indigo-600', 'bg-indigo-50', 'text-indigo-600');
+                }
+            });
+            validateStudentStep();
+        }
+
+        function setStudentNumber(num) {
+            state.studentNumber = num ? parseInt(num) : null;
+            validateStudentStep();
+        }
+
+        function validateStudentStep() {
+            const btn = document.getElementById('btn-to-vote');
+            if (state.studentGrade && state.studentClass && state.studentNumber) {
+                btn.disabled = false;
+                btn.className = "w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-lg shadow-md transition duration-200 flex items-center justify-center gap-2 cursor-pointer";
+            } else {
+                btn.disabled = true;
+                btn.className = "w-full bg-slate-300 text-white font-bold py-3.5 rounded-lg transition duration-200 flex items-center justify-center gap-2 cursor-not-allowed";
             }
         }
 
-        function handleStudentFormSubmit(e) {
-            e.preventDefault();
+        function proceedToVote() {
+            // 重複投票チェック (生徒キー: G-C-N)
+            const studentKey = `${state.studentGrade}-${state.studentClass}-${state.studentNumber}`;
+            const votedStudents = JSON.parse(localStorage.getItem(STORAGE_VOTED_STUDENTS) || '[]');
 
-            const formData = new FormData(e.target);
-            const grade = formData.get('grade');
-            const classNum = formData.get('classNum');
-            const attendNum = formData.get('attendNum');
-
-            if (!grade || !classNum || !attendNum) {
-                showAlert('学年、クラス、出席番号をすべて選択してください。');
+            if (votedStudents.includes(studentKey)) {
+                alert(`すでに ${state.studentGrade}年${state.studentClass}組${state.studentNumber}番 の投票データが存在します。\n生徒による投票は1回限りです。`);
                 return;
             }
 
-            const studentId = `${grade}-${classNum}-${attendNum}`;
+            document.getElementById('voter-badge').className = "bg-indigo-100 text-indigo-800 font-bold px-3 py-1 rounded-full text-xs";
+            document.getElementById('voter-badge').textContent = "生徒";
+            document.getElementById('voter-info-display').textContent = `${state.studentGrade}年 ${state.studentClass}組 ${state.studentNumber}番`;
 
-            const votedStudents = JSON.parse(localStorage.getItem(STORAGE_KEY_STUDENTS) || '[]');
-            if (votedStudents.includes(studentId)) {
-                showAlert(`「${grade}年${classNum}組 出席番号${attendNum}番」は既に投票済みです。投票は1人1回までとなります。`);
-                return;
-            }
-
-            studentInfo = { grade, classNum, attendNum, id: studentId };
-            document.getElementById('currentUserDisplay').textContent = `${grade}年${classNum}組 ${attendNum}番`;
-            goToStep(3);
+            document.getElementById('step-student-info').classList.add('hidden');
+            document.getElementById('step-vote-cards').classList.remove('hidden');
+            renderCards();
+            lucide.createIcons();
         }
 
-        function renderFlagGrid() {
-            const grid = document.getElementById('flagGrid');
+        // --- Cards & Selection ---
+
+        function filterGrade(grade) {
+            state.filterGrade = grade;
+            document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
+                const keys = ['all', '1', '2', '3'];
+                if (keys[idx] === grade) {
+                    btn.className = "tab-btn flex-1 py-3 text-center font-bold text-sm border-b-2 border-indigo-600 text-indigo-600 bg-indigo-50/30";
+                } else {
+                    btn.className = "tab-btn flex-1 py-3 text-center font-bold text-sm text-slate-500 border-b-2 border-transparent hover:text-slate-800";
+                }
+            });
+            renderCards();
+        }
+
+        function renderCards() {
+            const grid = document.getElementById('flag-cards-grid');
             grid.innerHTML = '';
 
-            const filtered = FLAG_DATA.filter(flag => {
-                if (currentFilterGrade === 'all') return true;
-                return flag.grade === currentFilterGrade;
-            });
+            const filtered = flags.filter(f => state.filterGrade === 'all' || f.grade == state.filterGrade);
 
             filtered.forEach(flag => {
+                const isSelected = state.selectedFlagId === flag.id;
+                
                 const card = document.createElement('div');
-                card.id = `flag-card-${flag.id}`;
-                card.className = `bg-white border-2 border-slate-200 rounded-2xl overflow-hidden hover:shadow-md transition duration-200 flex flex-col justify-between group relative cursor-pointer`;
+                card.className = `bg-white rounded-xl overflow-hidden border-2 cursor-pointer transition-all duration-200 flex flex-col justify-between ${isSelected ? 'card-selected border-indigo-600' : 'border-slate-200 hover:border-slate-300'}`;
+                card.onclick = () => selectCard(flag.id);
 
                 card.innerHTML = `
-                    <div onclick="openPreviewModal('${flag.id}')">
-                        <div class="h-48 bg-slate-100 relative overflow-hidden flex items-center justify-center border-b border-slate-100">
-                            <img src="${flag.imageUrl}" alt="${flag.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-                            <span class="absolute top-3 left-3 bg-black/60 text-white text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-md">
-                                ${flag.className}
-                            </span>
-                            <span class="absolute bottom-3 right-3 bg-white/80 hover:bg-white text-slate-800 text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm flex items-center gap-1 backdrop-blur-sm">
-                                <i class="fa-solid fa-magnifying-glass-plus"></i> 拡大
-                            </span>
+                    <div>
+                        <div class="relative aspect-video bg-slate-100 overflow-hidden">
+                            <img src="${flag.imageUrl}" alt="${flag.name}" class="w-full h-full object-cover">
+                            ${isSelected ? '<div class="absolute top-2 right-2 bg-indigo-600 text-white p-1.5 rounded-full shadow"><i data-lucide="check" class="w-5 h-5"></i></div>' : ''}
                         </div>
-                        <div class="p-4 space-y-2">
-                            <h4 class="font-bold text-slate-800 group-hover:text-blue-600 transition text-base">${flag.title}</h4>
-                            <p class="text-xs text-slate-500 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                                "${flag.slogan}"
-                            </p>
+                        <div class="p-4">
+                            <h3 class="text-xl font-bold text-slate-800">${flag.name}</h3>
                         </div>
                     </div>
-                    <div class="p-4 pt-0 flex justify-between items-center" onclick="selectFlag('${flag.id}')">
-                        <span class="text-xs text-blue-600 font-bold hover:underline">タップして選択</span>
-                        <div class="flag-radio w-6 h-6 rounded-full border-2 border-slate-300 flex items-center justify-center group-hover:border-blue-600 transition">
-                            <div class="flag-radio-inner w-3 h-3 rounded-full bg-blue-600 hidden"></div>
+                    <div class="px-4 pb-4">
+                        <div class="w-full py-2.5 rounded-lg text-center font-bold text-sm transition ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}">
+                            ${isSelected ? '選択中' : 'この学級旗を選ぶ'}
                         </div>
                     </div>
                 `;
-
                 grid.appendChild(card);
             });
-
-            if (selectedFlagId) {
-                highlightSelectedFlagCard(selectedFlagId);
-            }
+            lucide.createIcons();
         }
 
-        function openPreviewModal(flagId) {
-            previewingFlagId = flagId;
-            const flag = FLAG_DATA.find(f => f.id === flagId);
-            if (!flag) return;
+        function selectCard(id) {
+            state.selectedFlagId = id;
+            renderCards();
 
-            document.getElementById('modalPreviewImg').src = flag.imageUrl;
-            document.getElementById('modalPreviewClass').textContent = flag.className;
-            document.getElementById('modalPreviewTitle').textContent = flag.title;
-            document.getElementById('modalPreviewSlogan').textContent = `"${flag.slogan}"`;
+            const submitBtn = document.getElementById('btn-submit-vote');
+            const targetFlag = flags.find(f => f.id === id);
             
-            document.getElementById('imagePreviewModal').classList.remove('hidden');
+            submitBtn.disabled = false;
+            submitBtn.className = "w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg text-lg flex items-center justify-center gap-2 cursor-pointer transition-all";
+            submitBtn.innerHTML = `<i data-lucide="check-circle" class="w-6 h-6"></i> <span>「${targetFlag.name}」に投票する</span>`;
+            lucide.createIcons();
         }
 
-        function closePreviewModal() {
-            document.getElementById('imagePreviewModal').classList.add('hidden');
-        }
+        // --- Confirmation & Voting Submission ---
 
-        function selectFlagFromModal() {
-            if (previewingFlagId) {
-                selectFlag(previewingFlagId);
-            }
-            closePreviewModal();
-        }
+        function confirmVoteModal() {
+            if (!state.selectedFlagId) return;
 
-        function filterFlags(grade) {
-            currentFilterGrade = grade;
-            document.querySelectorAll('.filter-tab').forEach(tab => {
-                tab.className = "filter-tab flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900";
-            });
-            const activeTab = document.getElementById(`filter-${grade}`);
-            if (activeTab) {
-                activeTab.className = "filter-tab flex-1 sm:flex-none px-3 py-1.5 rounded-lg bg-white shadow-sm text-blue-600 font-bold";
-            }
-            renderFlagGrid();
-        }
-
-        function selectFlag(id) {
-            selectedFlagId = id;
+            const flag = flags.find(f => f.id === state.selectedFlagId);
             
-            FLAG_DATA.forEach(item => {
-                const card = document.getElementById(`flag-card-${item.id}`);
-                if (card) {
-                    card.classList.remove('flag-card-selected');
-                    const inner = card.querySelector('.flag-radio-inner');
-                    const radio = card.querySelector('.flag-radio');
-                    if (inner) inner.classList.add('hidden');
-                    if (radio) radio.classList.remove('border-blue-600');
-                }
-            });
+            document.getElementById('confirm-voter-tag').textContent = state.voterType === 'guest' ? '保護者・一般投票' : `生徒: ${state.studentGrade}年${state.studentClass}組${state.studentNumber}番`;
+            document.getElementById('confirm-flag-title').textContent = flag.name;
+            document.getElementById('confirm-flag-img').src = flag.imageUrl;
 
-            highlightSelectedFlagCard(id);
-
-            const flagObj = FLAG_DATA.find(f => f.id === id);
-            if (flagObj) {
-                document.getElementById('selectedFlagLabel').textContent = flagObj.title;
-                const btn = document.getElementById('submitVoteBtn');
-                btn.disabled = false;
-                btn.className = "py-3 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition shadow-lg shadow-blue-200 flex items-center gap-2 cursor-pointer animate-bounce-short";
-            }
+            document.getElementById('modal-confirm').classList.remove('hidden');
+            lucide.createIcons();
         }
 
-        function highlightSelectedFlagCard(id) {
-            const card = document.getElementById(`flag-card-${id}`);
-            if (card) {
-                card.classList.add('flag-card-selected');
-                const inner = card.querySelector('.flag-radio-inner');
-                const radio = card.querySelector('.flag-radio');
-                if (inner) inner.classList.remove('hidden');
-                if (radio) radio.classList.add('border-blue-600');
-            }
+        function closeConfirmModal() {
+            document.getElementById('modal-confirm').classList.add('hidden');
         }
 
-        function confirmVote() {
-            if (!selectedFlagId) return;
-            const flagObj = FLAG_DATA.find(f => f.id === selectedFlagId);
-            document.getElementById('modalTargetFlag').textContent = flagObj.title;
-            document.getElementById('confirmModal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('confirmModal').classList.add('hidden');
-        }
-
-        function submitFinalVote() {
-            closeModal();
-
+        function submitVote() {
+            const flag = flags.find(f => f.id === state.selectedFlagId);
+            
             const voteRecord = {
-                id: Date.now().toString(),
-                role: selectedRole,
-                flagId: selectedFlagId,
-                studentId: studentInfo ? studentInfo.id : null,
-                timestamp: new Date().toLocaleString('ja-JP')
+                id: Date.now(),
+                timestamp: new Date().toLocaleString('ja-JP'),
+                voterType: state.voterType,
+                studentInfo: state.voterType === 'student' ? {
+                    grade: state.studentGrade,
+                    class: state.studentClass,
+                    number: state.studentNumber
+                } : null,
+                flagId: flag.id,
+                flagName: flag.name
             };
 
-            const existingVotes = JSON.parse(localStorage.getItem(STORAGE_KEY_VOTES) || '[]');
-            existingVotes.push(voteRecord);
-            localStorage.setItem(STORAGE_KEY_VOTES, JSON.stringify(existingVotes));
+            // Save Vote to Storage
+            const votes = JSON.parse(localStorage.getItem(STORAGE_VOTES) || '[]');
+            votes.push(voteRecord);
+            localStorage.setItem(STORAGE_VOTES, JSON.stringify(votes));
 
-            if (selectedRole === 'student' && studentInfo) {
-                const votedStudents = JSON.parse(localStorage.getItem(STORAGE_KEY_STUDENTS) || '[]');
-                votedStudents.push(studentInfo.id);
-                localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(votedStudents));
+            // If Student, record voted key to prevent re-vote
+            if (state.voterType === 'student') {
+                const studentKey = `${state.studentGrade}-${state.studentClass}-${state.studentNumber}`;
+                const votedStudents = JSON.parse(localStorage.getItem(STORAGE_VOTED_STUDENTS) || '[]');
+                votedStudents.push(studentKey);
+                localStorage.setItem(STORAGE_VOTED_STUDENTS, JSON.stringify(votedStudents));
             }
 
-            const flagObj = FLAG_DATA.find(f => f.id === selectedFlagId);
-            document.getElementById('summaryRole').textContent = selectedRole === 'student' ? `生徒 (${studentInfo.grade}年${studentInfo.classNum}組 ${studentInfo.attendNum}番)` : '保護者・一般';
-            document.getElementById('summaryClass').textContent = flagObj.title;
-            document.getElementById('summaryTime').textContent = voteRecord.timestamp;
-
-            // Automatically refresh admin results if open
-            loadAdminResults();
-
-            goToStep(4);
+            closeConfirmModal();
+            document.getElementById('modal-complete').classList.remove('hidden');
+            lucide.createIcons();
         }
 
-        function resetToHome() {
-            selectedRole = null;
-            studentInfo = null;
-            selectedFlagId = null;
-            document.getElementById('studentForm').reset();
-            document.getElementById('selectedFlagLabel').textContent = '未選択';
-            const btn = document.getElementById('submitVoteBtn');
-            btn.disabled = true;
-            btn.className = "py-3 px-6 rounded-xl bg-slate-300 text-slate-500 font-bold transition flex items-center gap-2 cursor-not-allowed";
-            goToStep(1);
+        function finishVoteAndReset() {
+            document.getElementById('modal-complete').classList.add('hidden');
+            resetToVoterType();
         }
 
-        function openAdminModal() {
-            document.getElementById('adminModal').classList.remove('hidden');
+        // --- Admin Functions ---
+
+        function showAdminLogin() {
+            document.getElementById('admin-pass-input').value = '';
+            document.getElementById('modal-admin-login').classList.remove('hidden');
         }
 
-        function closeAdminModal() {
-            document.getElementById('adminModal').classList.add('hidden');
+        function closeAdminLogin() {
+            document.getElementById('modal-admin-login').classList.add('hidden');
         }
 
-        function checkAdminPassword() {
-            const pass = document.getElementById('adminPassInput').value;
-            if (pass === 'admin123') {
-                document.getElementById('adminLoginSection').classList.add('hidden');
-                document.getElementById('adminContentSection').classList.remove('hidden');
-                document.getElementById('adminPassError').classList.add('hidden');
-                loadAdminResults();
-                renderAdminSettingsList();
+        function verifyAdminPass() {
+            const pass = document.getElementById('admin-pass-input').value;
+            if (pass === ADMIN_PASS) {
+                closeAdminLogin();
+                openAdminPanel();
             } else {
-                document.getElementById('adminPassError').classList.remove('hidden');
+                alert('パスワードが正しくありません');
             }
         }
 
-        function switchAdminTab(tabName) {
-            const resultsTab = document.getElementById('adminTabContent-results');
-            const settingsTab = document.getElementById('adminTabContent-settings');
-            const btnResults = document.getElementById('tabBtn-results');
-            const btnSettings = document.getElementById('tabBtn-settings');
+        function openAdminPanel() {
+            document.getElementById('step-voter-type').classList.add('hidden');
+            document.getElementById('step-student-info').classList.add('hidden');
+            document.getElementById('step-vote-cards').classList.add('hidden');
+            document.getElementById('section-admin').classList.remove('hidden');
 
-            if (tabName === 'results') {
-                resultsTab.classList.remove('hidden');
-                settingsTab.classList.add('hidden');
-                btnResults.className = "px-4 py-2 text-sm font-bold border-b-2 border-indigo-600 text-indigo-600";
-                btnSettings.className = "px-4 py-2 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800";
-                loadAdminResults();
+            renderAdminResults();
+            renderAdminSettings();
+            lucide.createIcons();
+        }
+
+        function closeAdmin() {
+            document.getElementById('section-admin').classList.add('hidden');
+            resetToVoterType();
+        }
+
+        function switchAdminTab(tab) {
+            const resTab = document.getElementById('admin-tab-results');
+            const setTab = document.getElementById('admin-tab-settings');
+            const resContent = document.getElementById('admin-content-results');
+            const setContent = document.getElementById('admin-content-settings');
+
+            if (tab === 'results') {
+                resTab.className = "flex-1 py-3 font-bold text-sm text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50";
+                setTab.className = "flex-1 py-3 font-bold text-sm text-slate-500 border-b-2 border-transparent";
+                resContent.classList.remove('hidden');
+                setContent.classList.add('hidden');
+                renderAdminResults();
             } else {
-                resultsTab.classList.add('hidden');
-                settingsTab.classList.remove('hidden');
-                btnResults.className = "px-4 py-2 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800";
-                btnSettings.className = "px-4 py-2 text-sm font-bold border-b-2 border-indigo-600 text-indigo-600";
+                setTab.className = "flex-1 py-3 font-bold text-sm text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50";
+                resTab.className = "flex-1 py-3 font-bold text-sm text-slate-500 border-b-2 border-transparent";
+                setContent.classList.remove('hidden');
+                resContent.classList.add('hidden');
+                renderAdminSettings();
             }
         }
 
-        function loadAdminResults() {
-            const votes = JSON.parse(localStorage.getItem(STORAGE_KEY_VOTES) || '[]');
+        function renderAdminResults() {
+            const votes = JSON.parse(localStorage.getItem(STORAGE_VOTES) || '[]');
             
+            // Calc stats
             const total = votes.length;
-            const studentCount = votes.filter(v => v.role === 'student').length;
-            const parentCount = votes.filter(v => v.role === 'parent').length;
+            const studentVotes = votes.filter(v => v.voterType === 'student').length;
+            const guestVotes = votes.filter(v => v.voterType === 'guest').length;
 
-            document.getElementById('statTotalVotes').textContent = total;
-            document.getElementById('statStudentVotes').textContent = studentCount;
-            document.getElementById('statParentVotes').textContent = parentCount;
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-student').textContent = studentVotes;
+            document.getElementById('stat-guest').textContent = guestVotes;
 
+            // Group by flag
             const counts = {};
-            FLAG_DATA.forEach(f => {
-                counts[f.id] = { total: 0, student: 0, parent: 0 };
+            flags.forEach(f => {
+                counts[f.id] = { total: 0, student: 0, guest: 0, flag: f };
             });
 
             votes.forEach(v => {
                 if (counts[v.flagId]) {
                     counts[v.flagId].total++;
-                    if (v.role === 'student') counts[v.flagId].student++;
-                    if (v.role === 'parent') counts[v.flagId].parent++;
+                    if (v.voterType === 'student') counts[v.flagId].student++;
+                    if (v.voterType === 'guest') counts[v.flagId].guest++;
                 }
             });
 
-            const sortedFlags = [...FLAG_DATA].sort((a, b) => counts[b.id].total - counts[a.id].total);
-            const container = document.getElementById('adminResultsList');
-            container.innerHTML = '';
+            const listContainer = document.getElementById('admin-results-list');
+            listContainer.innerHTML = '';
 
-            sortedFlags.forEach((flag, index) => {
-                const c = counts[flag.id];
-                const studentPct = total > 0 ? (c.student / total) * 100 : 0;
-                const parentPct = total > 0 ? (c.parent / total) * 100 : 0;
+            const sortedFlags = Object.values(counts).sort((a,b) => b.total - a.total);
+
+            sortedFlags.forEach(item => {
+                const maxVote = Math.max(...sortedFlags.map(s => s.total), 1);
+                const pctStudent = (item.student / maxVote) * 100;
+                const pctGuest = (item.guest / maxVote) * 100;
 
                 const row = document.createElement('div');
-                row.className = "bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2";
+                row.className = "space-y-1.5";
                 row.innerHTML = `
-                    <div class="flex justify-between items-center text-xs">
-                        <div class="flex items-center gap-2 font-bold text-slate-800">
-                            <span class="w-5 h-5 rounded-full ${index < 3 ? 'bg-amber-400 text-slate-900' : 'bg-slate-200 text-slate-600'} flex items-center justify-center text-[10px]">
-                                ${index + 1}
-                            </span>
-                            <span class="text-sm">${flag.title}</span>
-                        </div>
-                        <div class="text-right">
-                            <span class="font-bold text-base text-slate-800">${c.total}</span>
-                            <span class="text-xs text-slate-400">票</span>
+                    <div class="flex justify-between items-center text-sm font-bold">
+                        <span class="text-slate-800">${item.flag.name}</span>
+                        <div class="space-x-2 text-xs">
+                            <span class="text-indigo-600">生徒: ${item.student}</span>
+                            <span class="text-sky-600">保護者: ${item.guest}</span>
+                            <span class="text-slate-800 font-extrabold text-sm ml-1">計: ${item.total}票</span>
                         </div>
                     </div>
-                    <div class="w-full bg-slate-200 h-3 rounded-full overflow-hidden flex">
-                        <div class="bg-indigo-600 h-full transition-all duration-500" style="width: ${studentPct}%" title="生徒票: ${c.student}"></div>
-                        <div class="bg-sky-400 h-full transition-all duration-500" style="width: ${parentPct}%" title="保護者票: ${c.parent}"></div>
-                    </div>
-                    <div class="flex justify-between text-[11px] text-slate-500 pt-0.5">
-                        <span>生徒票: <strong class="text-indigo-600">${c.student}</strong> 票</span>
-                        <span>保護者票: <strong class="text-sky-500">${c.parent}</strong> 票</span>
+                    <div class="h-4 bg-slate-100 rounded-full overflow-hidden flex">
+                        <div style="width: ${pctStudent}%" class="bg-indigo-600 h-full"></div>
+                        <div style="width: ${pctGuest}%" class="bg-sky-400 h-full"></div>
                     </div>
                 `;
-                container.appendChild(row);
+                listContainer.appendChild(row);
             });
         }
 
-        // Render Image & Title Settings List in Admin
-        function renderAdminSettingsList() {
-            const container = document.getElementById('adminSettingsList');
+        function renderAdminSettings() {
+            const container = document.getElementById('admin-settings-list');
             container.innerHTML = '';
 
-            FLAG_DATA.forEach(flag => {
-                const card = document.createElement('div');
-                card.className = "bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col md:flex-row gap-4 items-start md:items-center";
-
-                card.innerHTML = `
-                    <div class="w-24 h-20 bg-slate-200 rounded-lg overflow-hidden shrink-0 relative border border-slate-300">
-                        <img id="admin-preview-${flag.id}" src="${flag.imageUrl}" class="w-full h-full object-cover">
+            flags.forEach((flag, index) => {
+                const item = document.createElement('div');
+                item.className = "border rounded-xl p-4 space-y-3 bg-slate-50";
+                item.innerHTML = `
+                    <div class="font-bold text-slate-700 border-b pb-2 flex justify-between items-center">
+                        <span>${flag.name} の設定</span>
+                        <span class="text-xs text-slate-400">ID: ${flag.id}</span>
                     </div>
-                    <div class="flex-grow space-y-2 w-full">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">${flag.className}</span>
-                            <label class="cursor-pointer bg-white border border-slate-300 hover:border-indigo-500 text-slate-700 px-2.5 py-1 rounded-lg text-[11px] font-bold transition">
-                                <i class="fa-solid fa-upload text-indigo-500 mr-1"></i>画像を変更
-                                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event, '${flag.id}')">
-                            </label>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">作品タイトル・クラス名</label>
+                        <input type="text" id="setting-name-${flag.id}" value="${flag.name}" class="w-full text-sm border rounded p-2 font-bold">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">学級旗の画像</label>
+                        <div class="flex gap-3 items-center">
+                            <img id="preview-${flag.id}" src="${flag.imageUrl}" class="w-20 h-14 object-cover rounded border bg-white">
+                            <div class="flex-1 space-y-1">
+                                <input type="file" accept="image/*" onchange="handleImageUpload(event, '${flag.id}')" class="text-xs w-full text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700">
+                                <button onclick="resetSingleImage('${flag.id}')" class="text-xs text-slate-400 hover:underline">デフォルト画像に戻す</button>
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase">作品タイトル</label>
-                            <input type="text" id="admin-title-${flag.id}" value="${flag.title}" class="w-full text-xs font-bold border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase">スローガン・説明</label>
-                            <input type="text" id="admin-slogan-${flag.id}" value="${flag.slogan}" class="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <button onclick="saveSingleSetting('${flag.id}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded text-xs transition">
+                            設定を保存
+                        </button>
                     </div>
                 `;
-                container.appendChild(card);
+                container.appendChild(item);
             });
         }
 
-        function handleImageUpload(e, flagId) {
+        function handleImageUpload(e, id) {
             const file = e.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(event) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800;
-                    const scale = MAX_WIDTH / img.width;
-                    canvas.width = MAX_WIDTH;
-                    canvas.height = img.height * scale;
-
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                    const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-
-                    const imgElem = document.getElementById(`admin-preview-${flagId}`);
-                    if (imgElem) imgElem.src = resizedDataUrl;
-
-                    const target = FLAG_DATA.find(f => f.id === flagId);
-                    if (target) target.imageUrl = resizedDataUrl;
-                };
-                img.src = event.target.result;
+            reader.onload = function(evt) {
+                const base64Img = evt.target.result;
+                document.getElementById(`preview-${id}`).src = base64Img;
+                // update state
+                const flag = flags.find(f => f.id === id);
+                if (flag) flag.imageUrl = base64Img;
             };
             reader.readAsDataURL(file);
         }
 
-        function saveAllSettings() {
-            const customSettings = JSON.parse(localStorage.getItem(STORAGE_KEY_CUSTOM_SETTINGS) || '{}');
+        function saveSingleSetting(id) {
+            const flag = flags.find(f => f.id === id);
+            if (!flag) return;
 
-            FLAG_DATA.forEach(flag => {
-                const titleVal = document.getElementById(`admin-title-${flag.id}`).value;
-                const sloganVal = document.getElementById(`admin-slogan-${flag.id}`).value;
+            const newName = document.getElementById(`setting-name-${id}`).value;
 
-                flag.title = titleVal;
-                flag.slogan = sloganVal;
+            flag.name = newName;
 
-                customSettings[flag.id] = {
-                    title: titleVal,
-                    slogan: sloganVal,
-                    imageUrl: flag.imageUrl
-                };
+            saveFlagsData();
+            alert(`${flag.name} の設定を更新しました。`);
+            renderCards();
+        }
+
+        function resetSingleImage(id) {
+            const defaultFlag = DEFAULT_FLAGS.find(f => f.id === id);
+            const flag = flags.find(f => f.id === id);
+            if (defaultFlag && flag) {
+                flag.imageUrl = defaultFlag.imageUrl;
+                document.getElementById(`preview-${id}`).src = defaultFlag.imageUrl;
+                saveFlagsData();
+                alert('画像を初期状態に戻しました。');
+                renderCards();
+            }
+        }
+
+        // --- CSV Export Functions (BOM Header to prevent Excel Encoding Issue) ---
+
+        function downloadResultsCSV() {
+            const votes = JSON.parse(localStorage.getItem(STORAGE_VOTES) || '[]');
+            
+            // Build aggregated rows
+            let csvContent = "\uFEFFクラス名,生徒票,保護者票,合計得票数\n";
+
+            flags.forEach(f => {
+                const studentCount = votes.filter(v => v.flagId === f.id && v.voterType === 'student').length;
+                const guestCount = votes.filter(v => v.flagId === f.id && v.voterType === 'guest').length;
+                const total = studentCount + guestCount;
+
+                csvContent += `"${f.name}",${studentCount},${guestCount},${total}\n`;
             });
 
-            localStorage.setItem(STORAGE_KEY_CUSTOM_SETTINGS, JSON.stringify(customSettings));
-            renderFlagGrid();
-            alert('学級旗の設定（画像・タイトル）を保存しました。');
+            downloadCSVFile(csvContent, `学級旗コンテスト_集計結果_${formatDateForFile()}.csv`);
         }
 
-        function resetAllSettingsToDefault() {
-            if (confirm('すべての画像およびタイトルを初期状態に戻しますか？')) {
-                localStorage.removeItem(STORAGE_KEY_CUSTOM_SETTINGS);
-                loadCustomSettings();
-                renderFlagGrid();
-                renderAdminSettingsList();
-                alert('初期状態に復元しました。');
-            }
-        }
-
-        function exportCSV(type) {
-            const votes = JSON.parse(localStorage.getItem(STORAGE_KEY_VOTES) || '[]');
-            if (votes.length === 0) {
-                alert('出力できる投票データがありません。');
-                return;
-            }
-
-            let csvString = "";
-
-            if (type === 'summary') {
-                csvString += "作品ID,学級旗クラス,生徒得票数,保護者得票数,合計得票数\n";
-
-                const counts = {};
-                FLAG_DATA.forEach(f => {
-                    counts[f.id] = { student: 0, parent: 0, total: 0 };
-                });
-                votes.forEach(v => {
-                    if (counts[v.flagId]) {
-                        counts[v.flagId].total++;
-                        if (v.role === 'student') counts[v.flagId].student++;
-                        if (v.role === 'parent') counts[v.flagId].parent++;
-                    }
-                });
-
-                FLAG_DATA.forEach(f => {
-                    const c = counts[f.id];
-                    csvString += `"${f.id}","${f.title}",${c.student},${c.parent},${c.total}\n`;
-                });
-            } else {
-                csvString += "投票ID,区分,学年クラス出席番号,投票先作品,投票日時\n";
-                votes.forEach(v => {
-                    const flagObj = FLAG_DATA.find(f => f.id === v.flagId);
-                    const flagName = flagObj ? flagObj.title : v.flagId;
-                    const studentDetail = v.studentId ? v.studentId : '-';
-                    const roleLabel = v.role === 'student' ? '生徒' : '保護者・一般';
-                    csvString += `"${v.id}","${roleLabel}","${studentDetail}","${flagName}","${v.timestamp}"\n`;
-                });
-            }
-
-            // UTF-8 BOM for Excel
-            const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-            const blob = new Blob([bom, csvString], { type: "text/csv;charset=utf-8;" });
-            const url = URL.createObjectURL(blob);
+        function downloadHistoryCSV() {
+            const votes = JSON.parse(localStorage.getItem(STORAGE_VOTES) || '[]');
             
-            const link = document.createElement("a");
-            link.setAttribute("href", url);
-            const fileName = type === 'summary' ? '学級旗投票_集計結果.csv' : '学級旗投票_明細履歴.csv';
-            link.setAttribute("download", fileName);
+            let csvContent = "\uFEFF日時,区分,学年,組,出席番号,投票先クラス\n";
+
+            votes.forEach(v => {
+                const dateStr = v.timestamp;
+                const typeStr = v.voterType === 'student' ? '生徒' : '保護者';
+                const grade = v.studentInfo ? `${v.studentInfo.grade}年` : '-';
+                const cls = v.studentInfo ? `${v.studentInfo.class}組` : '-';
+                const num = v.studentInfo ? `${v.studentInfo.number}番` : '-';
+                const flagName = v.flagName;
+
+                csvContent += `"${dateStr}","${typeStr}","${grade}","${cls}","${num}","${flagName}"\n`;
+            });
+
+            downloadCSVFile(csvContent, `学級旗コンテスト_投票明細ログ_${formatDateForFile()}.csv`);
+        }
+
+        function downloadCSVFile(content, fileName) {
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', fileName);
+            link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
 
-        function resetAllData() {
-            if (confirm('全ての投票データおよび生徒の重複防止ログを完全に消去します。本番運用前のクリア処理として実行してもよろしいですか？')) {
-                localStorage.removeItem(STORAGE_KEY_VOTES);
-                localStorage.removeItem(STORAGE_KEY_STUDENTS);
-                localStorage.removeItem(STORAGE_KEY_PARENT_DEVICE);
-                loadAdminResults();
-                alert('すべての投票データと制限ログをリセットしました。');
+        function formatDateForFile() {
+            const d = new Date();
+            return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+        }
+
+        function resetAllVotes() {
+            if (confirm("【警告】すべての投票データと重複投票ログを消去します。\nこの操作は取り消せません。本当に行いますか？")) {
+                localStorage.removeItem(STORAGE_VOTES);
+                localStorage.removeItem(STORAGE_VOTED_STUDENTS);
+                alert("全投票データを削除しました。");
+                renderAdminResults();
             }
-        }
-
-        function showAlert(msg) {
-            const banner = document.getElementById('alertBanner');
-            const bannerText = document.getElementById('alertBannerText');
-            bannerText.textContent = msg;
-            banner.classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function hideAlert() {
-            document.getElementById('alertBanner').classList.add('hidden');
         }
     </script>
 </body>
