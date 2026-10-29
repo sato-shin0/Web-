@@ -8,11 +8,15 @@
  * 【設定手順】
  * 1. https://script.google.com/ で「新しいプロジェクト」を作成
  * 2. このファイルの内容をすべて貼り付け、下の ADMIN_PASSWORD を独自のパスワードに変更して保存
- * 3. 右上「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」を選択
+ * 3. 上部の関数選択で「setup」を選んで「実行」し、表示される権限（ドライブ・スプレッドシート）をすべて許可する
+ *    （実行ログに「準備が完了しました」と表示されればOK）
+ * 4. 右上「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」を選択
  *      - 次のユーザーとして実行：自分
  *      - アクセスできるユーザー：全員
- *    で「デプロイ」し、ドライブ・スプレッドシートへのアクセスを許可する
- * 4. 表示された「ウェブアプリのURL（…/exec）」をコピーし、
+ *    で「デプロイ」する
+ *    ※「全員」が選べず「○○内の全員」しかない場合、学校の Google アカウントでログインしていない
+ *      端末からは利用できません（「サーバーに接続できません」と表示されます）
+ * 5. 表示された「ウェブアプリのURL（…/exec）」をコピーし、
  *    投票アプリ.html の API_URL に貼り付ける
  *
  * ※ このスクリプトを修正した場合（パスワード変更を含む）は、
@@ -31,6 +35,13 @@ const FLAG_IDS = ['1-1', '1-2', '1-3', '2-1', '2-2', '3-1', '3-2', '3-3'];
 const ROLE_LABELS = { student: '生徒', parent: '保護者・一般' };
 const VOTE_HEADERS = ['投票ID', '区分', '生徒(学年-組-番号)', '投票先', '投票日時'];
 
+// 初回のみエディタから実行：必要な権限の許可と保存先の作成を行う
+function setup() {
+  const folder = getFolder_();
+  const sheet = getVoteSheet_();
+  Logger.log('準備が完了しました。保存先フォルダ: ' + folder.getUrl() + ' / 投票データ: ' + sheet.getParent().getUrl());
+}
+
 // 全端末向け：保存済みの学級旗画像を返す
 function doGet() {
   const map = getImageMap_();
@@ -47,6 +58,15 @@ function doGet() {
 }
 
 function doPost(e) {
+  try {
+    return handlePost_(e);
+  } catch (err) {
+    // 権限不足などのエラー内容を画面に表示できるよう JSON で返す
+    return json_({ ok: false, error: 'サーバーエラー: ' + err.message });
+  }
+}
+
+function handlePost_(e) {
   let body;
   try {
     body = JSON.parse(e.postData.contents);
