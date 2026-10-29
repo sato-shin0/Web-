@@ -218,7 +218,7 @@
                         <button type="button" onclick="goToStep(1)" class="w-1/3 py-3 px-4 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-50 transition text-sm">
                             戻る
                         </button>
-                        <button type="submit" class="w-2/3 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-200 transition text-sm flex items-center justify-center gap-2">
+                        <button type="submit" id="studentFormSubmitBtn" class="w-2/3 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-200 transition text-sm flex items-center justify-center gap-2">
                             <span>学級旗選択へ進む</span>
                             <i class="fa-solid fa-chevron-right text-xs"></i>
                         </button>
@@ -356,7 +356,7 @@
                 <button onclick="closeModal()" class="w-1/2 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-50 text-sm">
                     やり直す
                 </button>
-                <button onclick="submitFinalVote()" class="w-1/2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-200 text-sm">
+                <button onclick="submitFinalVote()" id="confirmVoteBtn" class="w-1/2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-200 text-sm">
                     確定する
                 </button>
             </div>
@@ -503,15 +503,75 @@
         const STORAGE_KEY_STUDENTS = 'flag_voted_students_v5';
         const STORAGE_KEY_CUSTOM_SETTINGS = 'flag_custom_settings_v5';
 
+        // 学級旗画像・投票データの共有保存先（Google Apps Script ウェブアプリのURL）
+        // gas/Code.gs をデプロイして発行された「…/exec」のURLを貼り付けてください。
+        // 空のままだと画像・投票データはこの端末のブラウザ内にしか保存されません。
+        const API_URL = 'https://script.google.com/macros/s/AKfycbw1DggIz6uM8Gn41yY22Lldb0Nk4vODQ_xbZdsRgjdsbtks1LTwO_kPtyM1YAgXYoEHjQ/exec';
+
+        // API_URL が空のとき（この端末だけで使う場合）のみ使う管理者パスワード。
+        // API_URL を設定した場合、管理者パスワードは gas/Code.gs の ADMIN_PASSWORD で照合されます。
+        const LOCAL_ADMIN_PASSWORD = 'admin123';
+
+        let adminPassword = '';
+        let adminRefreshTimer = null;
+        const pendingImageIds = new Set();
+
         window.onload = function() {
             loadCustomSettings();
             populateAttendanceNumbers();
             renderFlagGrid();
+            syncSettingsFromServer();
         };
 
-        // Load Customized Images from LocalStorage
-        function loadCustomSettings() {
-            const customSettings = JSON.parse(localStorage.getItem(STORAGE_KEY_CUSTOM_SETTINGS) || '{}');
+        // Fetch shared images from server and cache them locally
+        async function syncSettingsFromServer() {
+            if (!API_URL) return;
+            try {
+                const res = await fetch(`${API_URL}?t=${Date.now()}`, { cache: 'no-store' });
+                const data = await res.json();
+                if (!data.ok) throw new Error(data.error || 'unknown error');
+
+                const customSettings = {};
+                Object.keys(data.images || {}).forEach(id => {
+                    customSettings[id] = { imageUrl: data.images[id] };
+                });
+                saveSettingsCache(customSettings);
+
+                // Keep unsaved uploads in the admin screen intact
+                if (pendingImageIds.size > 0) return;
+                loadCustomSettings(customSettings);
+                renderFlagGrid();
+                if (!document.getElementById('adminContentSection').classList.contains('hidden')) {
+                    renderAdminSettingsList();
+                }
+            } catch (err) {
+                console.error('学級旗画像の取得に失敗しました', err);
+            }
+        }
+
+        function saveSettingsCache(customSettings) {
+            try {
+                localStorage.setItem(STORAGE_KEY_CUSTOM_SETTINGS, JSON.stringify(customSettings));
+            } catch (err) {
+                console.warn('画像キャッシュを保存できませんでした', err);
+            }
+        }
+
+        async function postApi(payload) {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                // text/plain avoids a CORS preflight, which Apps Script does not support
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ ...payload, password: adminPassword })
+            });
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error || 'unknown error');
+            return data;
+        }
+
+        // Load Customized Images from LocalStorage (cache of the shared settings)
+        function loadCustomSettings(settings) {
+            const customSettings = settings || JSON.parse(localStorage.getItem(STORAGE_KEY_CUSTOM_SETTINGS) || '{}');
             FLAG_DATA = DEFAULT_FLAG_DATA.map(item => {
                 const custom = customSettings[item.id] || {};
                 return {
@@ -583,7 +643,16 @@
             }
         }
 
-        function handleStudentFormSubmit(e) {
+        async function hasStudentVoted(studentId) {
+            if (API_URL) {
+                const data = await postApi({ action: 'checkStudent', studentId });
+                return data.voted;
+            }
+            const votedStudents = JSON.parse(localStorage.getItem(STORAGE_KEY_STUDENTS) || '[]');
+            return votedStudents.includes(studentId);
+        }
+
+        async function handleStudentFormSubmit(e) {
             e.preventDefault();
 
             const formData = new FormData(e.target);
@@ -598,8 +667,18 @@
 
             const studentId = `${grade}-${classNum}-${attendNum}`;
 
-            const votedStudents = JSON.parse(localStorage.getItem(STORAGE_KEY_STUDENTS) || '[]');
-            if (votedStudents.includes(studentId)) {
+            const submitBtn = document.getElementById('studentFormSubmitBtn');
+            submitBtn.disabled = true;
+            let alreadyVoted;
+            try {
+                alreadyVoted = await hasStudentVoted(studentId);
+            } catch (err) {
+                showAlert(`投票状況を確認できませんでした。通信状況を確認してもう一度お試しください。(${err.message})`);
+                return;
+            } finally {
+                submitBtn.disabled = false;
+            }
+            if (alreadyVoted) {
                 showAlert(`「${grade}年${classNum}組 出席番号${attendNum}番」は既に投票済みです。投票は1人1回までとなります。`);
                 return;
             }
@@ -729,10 +808,11 @@
             document.getElementById('confirmModal').classList.add('hidden');
         }
 
-        function submitFinalVote() {
-            closeModal();
+        async function submitFinalVote() {
+            const confirmBtn = document.getElementById('confirmVoteBtn');
+            if (confirmBtn.disabled) return;
 
-            const voteRecord = {
+            let voteRecord = {
                 id: Date.now().toString(),
                 role: selectedRole,
                 flagId: selectedFlagId,
@@ -740,22 +820,42 @@
                 timestamp: new Date().toLocaleString('ja-JP')
             };
 
-            const existingVotes = JSON.parse(localStorage.getItem(STORAGE_KEY_VOTES) || '[]');
-            existingVotes.push(voteRecord);
-            localStorage.setItem(STORAGE_KEY_VOTES, JSON.stringify(existingVotes));
+            if (API_URL) {
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = '送信中…';
+                try {
+                    const data = await postApi({ action: 'vote', role: voteRecord.role, flagId: voteRecord.flagId, studentId: voteRecord.studentId });
+                    voteRecord = data.record;
+                } catch (err) {
+                    closeModal();
+                    if (err.message === 'already_voted') {
+                        showAlert(`「${studentInfo.grade}年${studentInfo.classNum}組 出席番号${studentInfo.attendNum}番」は既に投票済みです。投票は1人1回までとなります。`);
+                    } else {
+                        showAlert(`投票を送信できませんでした。通信状況を確認してもう一度「投票する」を押してください。(${err.message})`);
+                    }
+                    return;
+                } finally {
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = '確定する';
+                }
+            } else {
+                const existingVotes = JSON.parse(localStorage.getItem(STORAGE_KEY_VOTES) || '[]');
+                existingVotes.push(voteRecord);
+                localStorage.setItem(STORAGE_KEY_VOTES, JSON.stringify(existingVotes));
 
-            if (selectedRole === 'student' && studentInfo) {
-                const votedStudents = JSON.parse(localStorage.getItem(STORAGE_KEY_STUDENTS) || '[]');
-                votedStudents.push(studentInfo.id);
-                localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(votedStudents));
+                if (selectedRole === 'student' && studentInfo) {
+                    const votedStudents = JSON.parse(localStorage.getItem(STORAGE_KEY_STUDENTS) || '[]');
+                    votedStudents.push(studentInfo.id);
+                    localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(votedStudents));
+                }
             }
+            closeModal();
 
             const flagObj = FLAG_DATA.find(f => f.id === selectedFlagId);
             document.getElementById('summaryRole').textContent = selectedRole === 'student' ? `生徒 (${studentInfo.grade}年${studentInfo.classNum}組 ${studentInfo.attendNum}番)` : '保護者・一般';
             document.getElementById('summaryClass').textContent = flagObj.className;
             document.getElementById('summaryTime').textContent = voteRecord.timestamp;
 
-            loadAdminResults();
             goToStep(4);
         }
 
@@ -769,27 +869,70 @@
             btn.disabled = true;
             btn.className = "py-3 px-6 rounded-xl bg-slate-300 text-slate-500 font-bold transition flex items-center gap-2 cursor-not-allowed";
             goToStep(1);
+            syncSettingsFromServer();
         }
 
         function openAdminModal() {
             document.getElementById('adminModal').classList.remove('hidden');
+            if (adminPassword) loadAdminResults();
         }
 
         function closeAdminModal() {
             document.getElementById('adminModal').classList.add('hidden');
+            stopAdminAutoRefresh();
         }
 
-        function checkAdminPassword() {
+        async function checkAdminPassword() {
             const pass = document.getElementById('adminPassInput').value;
-            if (pass === 'admin123') {
+            const errorElem = document.getElementById('adminPassError');
+            let ok = false;
+            if (API_URL) {
+                try {
+                    adminPassword = pass;
+                    await postApi({ action: 'login' });
+                    ok = true;
+                } catch (err) {
+                    adminPassword = '';
+                    errorElem.textContent = err.message === 'unauthorized' ? 'パスワードが正しくありません。' : `認証できませんでした。(${err.message})`;
+                }
+            } else if (pass === LOCAL_ADMIN_PASSWORD) {
+                adminPassword = pass;
+                ok = true;
+            } else {
+                errorElem.textContent = 'パスワードが正しくありません。';
+            }
+
+            if (ok) {
                 document.getElementById('adminLoginSection').classList.add('hidden');
                 document.getElementById('adminContentSection').classList.remove('hidden');
-                document.getElementById('adminPassError').classList.add('hidden');
+                errorElem.classList.add('hidden');
                 loadAdminResults();
                 renderAdminSettingsList();
             } else {
-                document.getElementById('adminPassError').classList.remove('hidden');
+                errorElem.classList.remove('hidden');
             }
+        }
+
+        // Refresh the results while the admin results tab is open (votes come from other devices)
+        function startAdminAutoRefresh() {
+            stopAdminAutoRefresh();
+            if (!API_URL) return;
+            adminRefreshTimer = setInterval(loadAdminResults, 10000);
+        }
+
+        function stopAdminAutoRefresh() {
+            if (adminRefreshTimer) {
+                clearInterval(adminRefreshTimer);
+                adminRefreshTimer = null;
+            }
+        }
+
+        async function fetchVotes() {
+            if (API_URL) {
+                const data = await postApi({ action: 'getVotes' });
+                return data.votes;
+            }
+            return JSON.parse(localStorage.getItem(STORAGE_KEY_VOTES) || '[]');
         }
 
         function switchAdminTab(tabName) {
@@ -805,6 +948,7 @@
                 btnSettings.className = "px-4 py-2 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800";
                 loadAdminResults();
             } else {
+                stopAdminAutoRefresh();
                 resultsTab.classList.add('hidden');
                 settingsTab.classList.remove('hidden');
                 btnResults.className = "px-4 py-2 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800";
@@ -812,9 +956,19 @@
             }
         }
 
-        function loadAdminResults() {
-            const votes = JSON.parse(localStorage.getItem(STORAGE_KEY_VOTES) || '[]');
-            
+        async function loadAdminResults() {
+            let votes;
+            try {
+                votes = await fetchVotes();
+            } catch (err) {
+                console.error('投票データの取得に失敗しました', err);
+                return;
+            }
+            if (!document.getElementById('adminModal').classList.contains('hidden')
+                && !document.getElementById('adminTabContent-results').classList.contains('hidden')) {
+                if (!adminRefreshTimer) startAdminAutoRefresh();
+            }
+
             const total = votes.length;
             const studentCount = votes.filter(v => v.role === 'student').length;
             const parentCount = votes.filter(v => v.role === 'parent').length;
@@ -925,29 +1079,59 @@
                     if (imgElem) imgElem.src = resizedDataUrl;
 
                     const target = FLAG_DATA.find(f => f.id === flagId);
-                    if (target) target.imageUrl = resizedDataUrl;
+                    if (target) {
+                        target.imageUrl = resizedDataUrl;
+                        pendingImageIds.add(flagId);
+                    }
                 };
                 img.src = event.target.result;
             };
             reader.readAsDataURL(file);
         }
 
-        function saveAllSettings() {
+        async function saveAllSettings() {
             const customSettings = JSON.parse(localStorage.getItem(STORAGE_KEY_CUSTOM_SETTINGS) || '{}');
 
-            FLAG_DATA.forEach(flag => {
-                customSettings[flag.id] = {
-                    imageUrl: flag.imageUrl
-                };
-            });
+            if (API_URL && pendingImageIds.size > 0) {
+                const images = {};
+                pendingImageIds.forEach(id => {
+                    const flag = FLAG_DATA.find(f => f.id === id);
+                    if (flag) images[id] = flag.imageUrl;
+                });
+                try {
+                    await postApi({ action: 'save', images });
+                } catch (err) {
+                    alert(`学級旗画像の保存に失敗しました。通信状況を確認してもう一度お試しください。\n(${err.message})`);
+                    return;
+                }
+            }
 
-            localStorage.setItem(STORAGE_KEY_CUSTOM_SETTINGS, JSON.stringify(customSettings));
+            pendingImageIds.forEach(id => {
+                const flag = FLAG_DATA.find(f => f.id === id);
+                if (flag) customSettings[id] = { imageUrl: flag.imageUrl };
+            });
+            pendingImageIds.clear();
+
+            saveSettingsCache(customSettings);
             renderFlagGrid();
-            alert('学級旗画像を保存しました。');
+            if (API_URL) {
+                alert('学級旗画像を保存しました。すべての端末に反映されます。');
+            } else {
+                alert('学級旗画像を保存しました。\n※共有保存先（API_URL）が未設定のため、この端末にのみ反映されます。');
+            }
         }
 
-        function resetAllSettingsToDefault() {
+        async function resetAllSettingsToDefault() {
             if (confirm('すべての学級旗画像を初期状態に戻しますか？')) {
+                if (API_URL) {
+                    try {
+                        await postApi({ action: 'reset' });
+                    } catch (err) {
+                        alert(`初期画像への復元に失敗しました。\n(${err.message})`);
+                        return;
+                    }
+                }
+                pendingImageIds.clear();
                 localStorage.removeItem(STORAGE_KEY_CUSTOM_SETTINGS);
                 loadCustomSettings();
                 renderFlagGrid();
@@ -956,8 +1140,14 @@
             }
         }
 
-        function exportCSV(type) {
-            const votes = JSON.parse(localStorage.getItem(STORAGE_KEY_VOTES) || '[]');
+        async function exportCSV(type) {
+            let votes;
+            try {
+                votes = await fetchVotes();
+            } catch (err) {
+                alert(`投票データを取得できませんでした。(${err.message})`);
+                return;
+            }
             if (votes.length === 0) {
                 alert('出力できる投票データがありません。');
                 return;
@@ -1009,8 +1199,16 @@
             document.body.removeChild(link);
         }
 
-        function resetAllData() {
+        async function resetAllData() {
             if (confirm('全ての投票データおよび生徒の重複防止ログを完全に消去します。本番運用前のクリア処理として実行してもよろしいですか？')) {
+                if (API_URL) {
+                    try {
+                        await postApi({ action: 'resetVotes' });
+                    } catch (err) {
+                        alert(`投票データを消去できませんでした。(${err.message})`);
+                        return;
+                    }
+                }
                 localStorage.removeItem(STORAGE_KEY_VOTES);
                 localStorage.removeItem(STORAGE_KEY_STUDENTS);
                 loadAdminResults();
