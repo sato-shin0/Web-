@@ -390,6 +390,17 @@
                     </div>
                 </div>
 
+                <!-- Flag Image Settings -->
+                <div class="space-y-3 pt-4 border-t border-slate-200">
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">学級旗の画像設定</h4>
+                        <p class="text-[11px] text-slate-400 mt-1">各クラスの学級旗の画像を変更できます。画像ファイルを選択するか、画像のURLを入力してください。<br>※ 設定はこの端末のブラウザに保存されます。投票に使う端末ごとに設定してください。</p>
+                    </div>
+                    <div id="adminImageList" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
                 <!-- Admin Action Controls -->
                 <div class="pt-4 border-t border-slate-200 flex flex-wrap justify-between items-center gap-2">
                     <div class="flex gap-2">
@@ -441,8 +452,13 @@
         const STORAGE_KEY_VOTES = 'flag_votes_record_v3';
         const STORAGE_KEY_STUDENTS = 'flag_voted_students_v3';
         const STORAGE_KEY_PARENT_DEVICE = 'flag_parent_voted_device_v3';
+        const STORAGE_KEY_IMAGES = 'flag_custom_images_v1';
+
+        // Keep the original image URLs so a custom image can be reset
+        FLAG_DATA.forEach(f => { f.defaultImageUrl = f.imageUrl; });
 
         window.onload = function() {
+            applyCustomImages();
             populateAttendanceNumbers();
             renderFlagGrid();
             initDemoDataIfEmpty();
@@ -568,7 +584,7 @@
                     <div>
                         <!-- Flag Photo Image Area -->
                         <div class="h-48 bg-slate-100 relative overflow-hidden flex items-center justify-center border-b border-slate-100">
-                            <img src="${flag.imageUrl}" alt="${flag.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='https://via.placeholder.com/600x400/e2e8f0/64748b?text=%E7%94%BB%E2%85%B3%E6%BA%96%E5%82%99%E4%B8%AD'">
+                            <img src="${flag.imageUrl}" alt="${flag.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.onerror=null;this.src='https://via.placeholder.com/600x400/e2e8f0/64748b?text=%E7%94%BB%E2%85%B3%E6%BA%96%E5%82%99%E4%B8%AD'">
                             
                             <span class="absolute top-3 left-3 bg-black/60 text-white text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-md">
                                 ${flag.grade}年${flag.classNum}組
@@ -722,6 +738,7 @@
                 document.getElementById('adminContentSection').classList.remove('hidden');
                 document.getElementById('adminPassError').classList.add('hidden');
                 loadAdminResults();
+                renderAdminImageList();
             } else {
                 document.getElementById('adminPassError').classList.remove('hidden');
             }
@@ -792,6 +809,134 @@
                 `;
                 container.appendChild(row);
             });
+        }
+
+        // ===== Flag Image Settings =====
+        function getCustomImages() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY_IMAGES) || '{}');
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function applyCustomImages() {
+            const custom = getCustomImages();
+            FLAG_DATA.forEach(f => {
+                f.imageUrl = custom[f.id] || f.defaultImageUrl;
+            });
+        }
+
+        function saveCustomImage(flagId, url) {
+            const custom = getCustomImages();
+            if (url) {
+                custom[flagId] = url;
+            } else {
+                delete custom[flagId];
+            }
+            try {
+                localStorage.setItem(STORAGE_KEY_IMAGES, JSON.stringify(custom));
+            } catch (e) {
+                alert('\u753B\u50CF\u3092\u4FDD\u5B58\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u4FDD\u5B58\u5BB9\u91CF\u304C\u4E0D\u8DB3\u3057\u3066\u3044\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002\u3088\u308A\u5C0F\u3055\u3044\u753B\u50CF\u3092\u4F7F\u3046\u304B\u3001\u4ED6\u306E\u30AF\u30E9\u30B9\u306E\u753B\u50CF\u3092URL\u6307\u5B9A\u306B\u5207\u308A\u66FF\u3048\u3066\u304F\u3060\u3055\u3044\u3002');
+                return false;
+            }
+            applyCustomImages();
+            renderFlagGrid();
+            renderAdminImageList();
+            return true;
+        }
+
+        function renderAdminImageList() {
+            const container = document.getElementById('adminImageList');
+            container.innerHTML = '';
+            const custom = getCustomImages();
+
+            FLAG_DATA.forEach(flag => {
+                const isCustom = !!custom[flag.id];
+                const item = document.createElement('div');
+                item.className = "bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2";
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <img src="${flag.imageUrl}" alt="${flag.title}" class="w-20 h-14 object-cover rounded-lg border border-slate-200 bg-white flex-shrink-0" onerror="this.onerror=null;this.src='https://via.placeholder.com/160x112/e2e8f0/64748b?text=No+Image'">
+                        <div class="min-w-0">
+                            <div class="text-xs font-bold text-slate-800 truncate">${flag.title}</div>
+                            <div class="text-[10px] ${isCustom ? 'text-emerald-600' : 'text-slate-400'}">${isCustom ? '\u5909\u66F4\u6E08\u307F' : '\u521D\u671F\u753B\u50CF'}</div>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        <label class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-lg font-bold text-[11px] flex items-center gap-1 cursor-pointer">
+                            <i class="fa-solid fa-image"></i> \u753B\u50CF\u3092\u9078\u629E
+                            <input type="file" accept="image/*" class="hidden" onchange="handleFlagImageFile('${flag.id}', this)">
+                        </label>
+                        <button onclick="promptFlagImageUrl('${flag.id}')" class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 px-2.5 py-1.5 rounded-lg font-bold text-[11px] flex items-center gap-1">
+                            <i class="fa-solid fa-link"></i> URL\u3067\u6307\u5B9A
+                        </button>
+                        ${isCustom ? `
+                        <button onclick="resetFlagImage('${flag.id}')" class="bg-white hover:bg-red-50 text-red-600 border border-red-200 px-2.5 py-1.5 rounded-lg font-bold text-[11px] flex items-center gap-1">
+                            <i class="fa-solid fa-rotate-left"></i> \u5143\u306B\u623B\u3059
+                        </button>` : ''}
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // Shrink the image before storing it, so several flags fit in localStorage
+        function resizeImageFile(file, maxSize, quality) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = reject;
+                reader.onload = () => {
+                    const img = new Image();
+                    img.onerror = reject;
+                    img.onload = () => {
+                        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.round(img.width * scale);
+                        canvas.height = Math.round(img.height * scale);
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.src = reader.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function handleFlagImageFile(flagId, input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                alert('\u753B\u50CF\u30D5\u30A1\u30A4\u30EB\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002');
+                return;
+            }
+            try {
+                const dataUrl = await resizeImageFile(file, 1000, 0.8);
+                saveCustomImage(flagId, dataUrl);
+            } catch (e) {
+                alert('\u753B\u50CF\u3092\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u5225\u306E\u753B\u50CF\u30D5\u30A1\u30A4\u30EB\u3092\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002');
+            }
+        }
+
+        function promptFlagImageUrl(flagId) {
+            const flagObj = FLAG_DATA.find(f => f.id === flagId);
+            const current = getCustomImages()[flagId];
+            const initial = current && !current.startsWith('data:') ? current : '';
+            const url = prompt(`${flagObj.title} \u306E\u753B\u50CFURL\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002`, initial);
+            if (url === null) return;
+            const trimmed = url.trim();
+            if (!trimmed) return;
+            saveCustomImage(flagId, trimmed);
+        }
+
+        function resetFlagImage(flagId) {
+            const flagObj = FLAG_DATA.find(f => f.id === flagId);
+            if (confirm(`${flagObj.title} \u306E\u753B\u50CF\u3092\u521D\u671F\u753B\u50CF\u306B\u623B\u3057\u307E\u3059\u304B\uFF1F`)) {
+                saveCustomImage(flagId, null);
+            }
         }
 
         // Export CSV with Excel UTF-8 BOM byte marker (\uFEFF)
