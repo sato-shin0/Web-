@@ -558,13 +558,25 @@
         }
 
         async function postApi(payload) {
-            const res = await fetch(API_URL, {
-                method: 'POST',
-                // text/plain avoids a CORS preflight, which Apps Script does not support
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ ...payload, password: adminPassword })
-            });
-            const data = await res.json();
+            let res;
+            try {
+                res = await fetch(API_URL, {
+                    method: 'POST',
+                    // text/plain avoids a CORS preflight, which Apps Script does not support
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ ...payload, password: adminPassword })
+                });
+            } catch (err) {
+                // Apps Script redirects to a Google login page when the web app is not public,
+                // which the browser reports as a network error
+                throw new Error(`サーバーに接続できません。Apps Script の「アクセスできるユーザー」が「全員」になっているか確認してください: ${err.message}`);
+            }
+            let data;
+            try {
+                data = await res.json();
+            } catch (err) {
+                throw new Error(`サーバーから正しい応答がありません（HTTP ${res.status}）。Apps Script のデプロイ設定を確認してください`);
+            }
             if (!data.ok) {
                 const err = new Error(data.error || 'unknown error');
                 // Server-side password changed after login: send the admin back to the login screen
