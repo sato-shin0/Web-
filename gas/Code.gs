@@ -33,7 +33,7 @@ const PROP_KEY = 'flagImages';               // { flagId: driveFileId }
 const PROP_SPREADSHEET_ID = 'voteSpreadsheetId';
 const FLAG_IDS = ['1-1', '1-2', '1-3', '2-1', '2-2', '3-1', '3-2', '3-3'];
 const ROLE_LABELS = { student: '生徒', parent: '保護者・一般' };
-const VOTE_HEADERS = ['投票ID', '区分', '生徒(学年-組-番号)', '投票先', '投票日時'];
+const VOTE_HEADERS = ['投票ID', '区分', '生徒', '投票先', '投票日時'];
 
 // 初回のみエディタから実行：必要な権限の許可と保存先の作成を行う
 function setup() {
@@ -126,7 +126,7 @@ function vote_(body) {
     studentId: studentId || null,
     timestamp: Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss')
   };
-  getVoteSheet_().appendRow([record.id, ROLE_LABELS[record.role], studentId, record.flagId, record.timestamp]);
+  getVoteSheet_().appendRow([record.id, ROLE_LABELS[record.role], studentId ? studentLabel_(studentId) : '', record.flagId, record.timestamp]);
   return { ok: true, record: record };
 }
 
@@ -141,7 +141,7 @@ function getVotes_() {
   const votes = sheet.getRange(2, 1, lastRow - 1, VOTE_HEADERS.length).getDisplayValues().map(row => ({
     id: row[0],
     role: roleByLabel[row[1]] || row[1],
-    studentId: row[2] || null,
+    studentId: labelToStudentId_(row[2]) || null,
     flagId: row[3],
     timestamp: row[4]
   }));
@@ -159,7 +159,19 @@ function getVotedStudentIds_() {
   const sheet = getVoteSheet_();
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
-  return sheet.getRange(2, 3, lastRow - 1, 1).getDisplayValues().map(row => row[0]).filter(String);
+  return sheet.getRange(2, 3, lastRow - 1, 1).getDisplayValues().map(row => labelToStudentId_(row[0])).filter(String);
+}
+
+// 「1-1-5」のままだとスプレッドシートが日付に変換して照合できなくなるため、「1年1組5番」の形で保存する
+function studentLabel_(studentId) {
+  const parts = studentId.split('-');
+  return parts[0] + '年' + parts[1] + '組' + parts[2] + '番';
+}
+
+function labelToStudentId_(label) {
+  const m = /^(\d)年(\d)組(\d{1,2})番$/.exec(label);
+  if (m) return m[1] + '-' + m[2] + '-' + m[3];
+  return /^\d-\d-\d{1,2}$/.test(label) ? label : '';
 }
 
 function isValidStudentId_(studentId) {
@@ -181,7 +193,7 @@ function getVoteSheet_() {
   DriveApp.getFileById(ss.getId()).moveTo(getFolder_());
   const sheet = ss.getSheets()[0];
   sheet.setName('投票');
-  // 「1-1-5」などが日付に変換されないよう、すべて書式なしテキストにする
+  // 投票ID などが数値・日付に変換されないよう、すべて書式なしテキストにする
   sheet.getRange(1, 1, sheet.getMaxRows(), VOTE_HEADERS.length).setNumberFormat('@');
   sheet.getRange(1, 1, 1, VOTE_HEADERS.length).setValues([VOTE_HEADERS]).setFontWeight('bold');
   sheet.setFrozenRows(1);
