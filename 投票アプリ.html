@@ -503,15 +503,70 @@
         const STORAGE_KEY_STUDENTS = 'flag_voted_students_v5';
         const STORAGE_KEY_CUSTOM_SETTINGS = 'flag_custom_settings_v5';
 
+        // 学級旗画像の共有保存先（Google Apps Script ウェブアプリのURL）
+        // gas/Code.gs をデプロイして発行された「…/exec」のURLを貼り付けてください。
+        // 空のままだと画像はこの端末のブラウザ内にしか保存されません。
+        const SETTINGS_API_URL = '';
+
+        let adminPassword = '';
+        const pendingImageIds = new Set();
+
         window.onload = function() {
             loadCustomSettings();
             populateAttendanceNumbers();
             renderFlagGrid();
+            syncSettingsFromServer();
         };
 
-        // Load Customized Images from LocalStorage
-        function loadCustomSettings() {
-            const customSettings = JSON.parse(localStorage.getItem(STORAGE_KEY_CUSTOM_SETTINGS) || '{}');
+        // Fetch shared images from server and cache them locally
+        async function syncSettingsFromServer() {
+            if (!SETTINGS_API_URL) return;
+            try {
+                const res = await fetch(`${SETTINGS_API_URL}?t=${Date.now()}`, { cache: 'no-store' });
+                const data = await res.json();
+                if (!data.ok) throw new Error(data.error || 'unknown error');
+
+                const customSettings = {};
+                Object.keys(data.images || {}).forEach(id => {
+                    customSettings[id] = { imageUrl: data.images[id] };
+                });
+                saveSettingsCache(customSettings);
+
+                // Keep unsaved uploads in the admin screen intact
+                if (pendingImageIds.size > 0) return;
+                loadCustomSettings(customSettings);
+                renderFlagGrid();
+                if (!document.getElementById('adminContentSection').classList.contains('hidden')) {
+                    renderAdminSettingsList();
+                }
+            } catch (err) {
+                console.error('学級旗画像の取得に失敗しました', err);
+            }
+        }
+
+        function saveSettingsCache(customSettings) {
+            try {
+                localStorage.setItem(STORAGE_KEY_CUSTOM_SETTINGS, JSON.stringify(customSettings));
+            } catch (err) {
+                console.warn('画像キャッシュを保存できませんでした', err);
+            }
+        }
+
+        async function postSettings(payload) {
+            const res = await fetch(SETTINGS_API_URL, {
+                method: 'POST',
+                // text/plain avoids a CORS preflight, which Apps Script does not support
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ ...payload, password: adminPassword })
+            });
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error || 'unknown error');
+            return data;
+        }
+
+        // Load Customized Images from LocalStorage (cache of the shared settings)
+        function loadCustomSettings(settings) {
+            const customSettings = settings || JSON.parse(localStorage.getItem(STORAGE_KEY_CUSTOM_SETTINGS) || '{}');
             FLAG_DATA = DEFAULT_FLAG_DATA.map(item => {
                 const custom = customSettings[item.id] || {};
                 return {
@@ -769,6 +824,7 @@
             btn.disabled = true;
             btn.className = "py-3 px-6 rounded-xl bg-slate-300 text-slate-500 font-bold transition flex items-center gap-2 cursor-not-allowed";
             goToStep(1);
+            syncSettingsFromServer();
         }
 
         function openAdminModal() {
@@ -782,6 +838,7 @@
         function checkAdminPassword() {
             const pass = document.getElementById('adminPassInput').value;
             if (pass === 'admin123') {
+                adminPassword = pass;
                 document.getElementById('adminLoginSection').classList.add('hidden');
                 document.getElementById('adminContentSection').classList.remove('hidden');
                 document.getElementById('adminPassError').classList.add('hidden');
@@ -925,29 +982,59 @@
                     if (imgElem) imgElem.src = resizedDataUrl;
 
                     const target = FLAG_DATA.find(f => f.id === flagId);
-                    if (target) target.imageUrl = resizedDataUrl;
+                    if (target) {
+                        target.imageUrl = resizedDataUrl;
+                        pendingImageIds.add(flagId);
+                    }
                 };
                 img.src = event.target.result;
             };
             reader.readAsDataURL(file);
         }
 
-        function saveAllSettings() {
+        async function saveAllSettings() {
             const customSettings = JSON.parse(localStorage.getItem(STORAGE_KEY_CUSTOM_SETTINGS) || '{}');
 
-            FLAG_DATA.forEach(flag => {
-                customSettings[flag.id] = {
-                    imageUrl: flag.imageUrl
-                };
-            });
+            if (SETTINGS_API_URL && pendingImageIds.size > 0) {
+                const images = {};
+                pendingImageIds.forEach(id => {
+                    const flag = FLAG_DATA.find(f => f.id === id);
+                    if (flag) images[id] = flag.imageUrl;
+                });
+                try {
+                    await postSettings({ action: 'save', images });
+                } catch (err) {
+                    alert(`学級旗画像の保存に失敗しました。通信状況を確認してもう一度お試しください。\n(${err.message})`);
+                    return;
+                }
+            }
 
-            localStorage.setItem(STORAGE_KEY_CUSTOM_SETTINGS, JSON.stringify(customSettings));
+            pendingImageIds.forEach(id => {
+                const flag = FLAG_DATA.find(f => f.id === id);
+                if (flag) customSettings[id] = { imageUrl: flag.imageUrl };
+            });
+            pendingImageIds.clear();
+
+            saveSettingsCache(customSettings);
             renderFlagGrid();
-            alert('学級旗画像を保存しました。');
+            if (SETTINGS_API_URL) {
+                alert('学級旗画像を保存しました。すべての端末に反映されます。');
+            } else {
+                alert('学級旗画像を保存しました。\n※共有保存先（SETTINGS_API_URL）が未設定のため、この端末にのみ反映されます。');
+            }
         }
 
-        function resetAllSettingsToDefault() {
+        async function resetAllSettingsToDefault() {
             if (confirm('すべての学級旗画像を初期状態に戻しますか？')) {
+                if (SETTINGS_API_URL) {
+                    try {
+                        await postSettings({ action: 'reset' });
+                    } catch (err) {
+                        alert(`初期画像への復元に失敗しました。\n(${err.message})`);
+                        return;
+                    }
+                }
+                pendingImageIds.clear();
                 localStorage.removeItem(STORAGE_KEY_CUSTOM_SETTINGS);
                 loadCustomSettings();
                 renderFlagGrid();
